@@ -107,6 +107,44 @@ const GLOSSARY_ENHANCER_JS = `
   enhance();
   window.__SPU_ENHANCE_GLOSSARY = enhance;
 })();`;
+const DS_COMPAT_JS = `
+(function(){
+  window.__SPU_INSTALL_DS_COMPAT = function(NS){
+    if(!NS || NS.__spuBuilderCompat) return;
+    if(NS.BlockRegistry && NS.BlockRegistry.byType){
+      if(NS.BlockRegistry.byType.masthead) NS.BlockRegistry.byType.masthead.rich = true;
+      if(NS.BlockRegistry.byType.conclusion) NS.BlockRegistry.byType.conclusion.rich = true;
+    }
+    function inline(value){
+      if(typeof value !== 'string' || !/[<&]/.test(value) || !NS.RichText) return value;
+      return React.createElement(NS.RichText, { html: value, as: 'span', className: 'spu-richtext--inline' });
+    }
+    function block(value){
+      if(typeof value !== 'string' || !/[<&]/.test(value) || !NS.RichText) return value;
+      return React.createElement(NS.RichText, { html: value });
+    }
+    var Masthead = NS.Masthead;
+    if(Masthead){
+      NS.Masthead = function(props){
+        props = props || {};
+        return React.createElement(Masthead, Object.assign({}, props, {
+          org: inline(props.org),
+          program: inline(props.program)
+        }));
+      };
+    }
+    var Conclusion = NS.Conclusion;
+    if(Conclusion){
+      NS.Conclusion = function(props){
+        props = props || {};
+        return React.createElement(Conclusion, Object.assign({}, props, {
+          body: block(props.body)
+        }));
+      };
+    }
+    NS.__spuBuilderCompat = true;
+  };
+})();`;
 
 async function fetchText(href: string): Promise<string> {
   const r = await fetch(href);
@@ -262,6 +300,7 @@ ${printFlag}
 <script id="spu-image-slots" type="application/json">${sidecarJson}</script>
 ${slotTag}
 ${bundleTag}
+<script>${escapeInlineScript(DS_COMPAT_JS)}</script>
 <script>
 (function () {
   var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -293,11 +332,10 @@ ${bundleTag}
     var NS = window[Object.keys(window).filter(function(k){return /DesignSystem/.test(k);})[0]];
     if (!NS || !NS.BlockDocument) { if(tries>0) return setTimeout(function(){start(tries-1);},50);
       document.getElementById('root').textContent = 'Kit do design system não carregado.'; return; }
+    if (window.__SPU_INSTALL_DS_COMPAT) window.__SPU_INSTALL_DS_COMPAT(NS);
     var doc = JSON.parse(document.getElementById('spu-doc').textContent);
-    var GlossaryFootnotes = NS.GlossaryFootnotes;
     var children = [React.createElement(NS.BlockDocument, { key: 'doc', doc: doc, mode: 'preview' })];
-    if (${o.print ? 'true' : 'false'} && GlossaryFootnotes) {
-      children.push(React.createElement(GlossaryFootnotes, { key: 'gloss', title: 'Glossário' }));
+    if (${o.print ? 'true' : 'false'}) {
       children.push(React.createElement(QuizAnswerKey, { key: 'quiz-key', doc: doc }));
     }
     ReactDOM.createRoot(document.getElementById('root')).render(

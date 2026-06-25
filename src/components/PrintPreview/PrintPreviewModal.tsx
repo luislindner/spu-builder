@@ -96,7 +96,6 @@ export function PrintPreviewModal({ ns, doc, onClose }: Props) {
   const [printModeReady, setPrintModeReady] = useState(false);
   const BlockView = ns.BlockView;
   const PageToc = ns.PageToc as undefined | ComponentType<{ items?: unknown[]; title?: string }>;
-  const GlossaryFootnotes = ns.GlossaryFootnotes as undefined | ComponentType<{ title?: string }>;
   const printDoc = useMemo(() => preparePrintDoc(doc), [doc]);
   const answerKeys = useMemo(() => collectQuizKeys(printDoc.blocks), [printDoc.blocks]);
   const richNotes = useMemo(() => collectRichNotes(printDoc.blocks), [printDoc.blocks]);
@@ -147,7 +146,6 @@ export function PrintPreviewModal({ ns, doc, onClose }: Props) {
                 <BlockView block={stripPrintMarkers(block)} mode="preview" />
               </div>
             ))}
-            {GlossaryFootnotes && <GlossaryFootnotes title="Glossário" />}
             {(richNotes.glossary.length > 0 || richNotes.links.length > 0) && (
               <section className={styles.richNotes}>
                 {richNotes.glossary.length > 0 && (

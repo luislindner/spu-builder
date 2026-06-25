@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { NS } from '../types/ds';
+import { installDSCompat } from '../utils/dsCompat';
 
 let cached: NS | null = null;
 
@@ -12,6 +13,7 @@ export function useDS(): NS | null {
     function poll() {
       const ns = window.SPUENAPAprendizagemDesignSystem_f0eeed;
       if (ns && ns.BlockDocument) {
+        installDSCompat(ns);
         cached = ns;
         setNs(ns);
       } else {

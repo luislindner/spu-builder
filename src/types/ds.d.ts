@@ -113,7 +113,7 @@ export interface NS {
   BuilderManifest: BuilderManifestType;
   BuilderExport: BuilderExportType;
   Editable: React.ComponentType<{ html: string; onChange: (html: string) => void; single?: boolean; placeholder?: string }>;
-  RichText: React.ComponentType<{ html: string }>;
+  RichText: React.ComponentType<{ html: string; as?: React.ElementType; className?: string }>;
   MarkToolbar: React.ComponentType<Record<string, never>>;
   IconGallery: React.ComponentType<{ value?: string; onPick: (name: string) => void; filter?: string; itemMin?: number; size?: number }>;
   Icon: React.ComponentType<{ name: string; size?: number }>;
