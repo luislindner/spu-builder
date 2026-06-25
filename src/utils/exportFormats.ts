@@ -1,0 +1,452 @@
+// Exportação em 3 formatos:
+//  1) HTML autocontido (1 arquivo, tudo inline)
+//  2) Pacote HTML + assets (.zip com pasta assets/ e images/)
+//  3) SCORM 1.2 não-avaliativo (.zip com imsmanifest.xml)
+//
+// Imagens: ficam no sidecar (data URL). Para o pacote/SCORM, extraio para
+// assets/images/*.webp e sirvo o sidecar com caminhos relativos (image-slot
+// relaxado p/ aceitá-los). O sidecar é sempre entregue por um override de
+// fetch embutido, então funciona em file:// (sem fetch real do JSON).
+
+import { zipSync, strToU8 } from 'fflate';
+import type { Doc } from '../types/ds';
+
+const DS_BASE = `${import.meta.env.BASE_URL}ds/`;
+const SLOT_FILE = '.image-slots.state.json';
+const SLOT_KEY = 'spu_image_slots';
+const REACT_URL = 'https://unpkg.com/react@18.3.1/umd/react.production.min.js';
+const REACTDOM_URL = 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js';
+const BUILDER_EXPORT_CSS = `
+.spu-figure__frame > image-slot {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 100% !important;
+}
+.spu-figure--small,
+.spu-figure--pequena { max-width: 340px; margin-inline: auto; }
+.spu-figure--medium,
+.spu-figure--medio,
+.spu-figure--media { max-width: 560px; margin-inline: auto; }
+.spu-figure--large,
+.spu-figure--wide,
+.spu-figure--ampla { max-width: 820px; margin-inline: auto; }
+.spu-figure--total { max-width: 100%; }
+.spu-richtext [data-term] {
+  position: relative;
+  display: inline-block;
+}
+.spu-term-pop {
+  position: absolute;
+  z-index: 80;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: max-content;
+  max-width: min(320px, 78vw);
+  display: none;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--text-body);
+  box-shadow: var(--shadow-lg);
+  text-align: left;
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.spu-term-pop strong {
+  display: block;
+  margin-bottom: .25em;
+  color: var(--text-strong);
+  font-family: var(--font-display);
+}
+.spu-term-open .spu-term-pop { display: block; }
+`;
+const GLOSSARY_ENHANCER_JS = `
+(function(){
+  function closeAll(except){
+    document.querySelectorAll('.spu-term-open').forEach(function(el){
+      if(el !== except){
+        el.classList.remove('spu-term-open');
+        el.setAttribute('aria-expanded','false');
+      }
+    });
+  }
+  function enhance(){
+    document.querySelectorAll('.spu-richtext [data-term]').forEach(function(el){
+      if(el.dataset.spuTermReady) return;
+      var term = (el.getAttribute('data-term') || el.textContent || '').trim();
+      var def = (el.getAttribute('title') || el.getAttribute('data-definition') || '').trim();
+      if(!term || !def) return;
+      el.dataset.spuTermReady = '1';
+      el.setAttribute('role','button');
+      el.setAttribute('tabindex','0');
+      el.setAttribute('aria-expanded','false');
+      el.removeAttribute('title');
+      var pop = document.createElement('span');
+      pop.className = 'spu-term-pop';
+      pop.setAttribute('role','tooltip');
+      pop.innerHTML = '<strong></strong><span></span>';
+      pop.querySelector('strong').textContent = term;
+      pop.querySelector('span').textContent = def;
+      el.appendChild(pop);
+      var toggle = function(ev){
+        ev.preventDefault();
+        ev.stopPropagation();
+        var open = el.classList.toggle('spu-term-open');
+        el.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if(open) closeAll(el);
+      };
+      el.addEventListener('click', toggle);
+      el.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter' || ev.key === ' '){ toggle(ev); }
+        if(ev.key === 'Escape'){ closeAll(); }
+      });
+    });
+  }
+  document.addEventListener('click', function(){ closeAll(); });
+  enhance();
+  window.__SPU_ENHANCE_GLOSSARY = enhance;
+})();`;
+
+async function fetchText(href: string): Promise<string> {
+  const r = await fetch(href);
+  if (!r.ok) throw new Error(`Falha ao buscar ${href}`);
+  return r.text();
+}
+
+// Resolve @import url('relativo') inlinando o CSS; mantém absolutos (fontes).
+async function inlineCss(href: string, seen = new Set<string>()): Promise<string> {
+  if (seen.has(href)) return '';
+  seen.add(href);
+  const dir = href.slice(0, href.lastIndexOf('/') + 1);
+  const txt = await fetchText(href);
+  const importRe = /@import\s+url\(['"]?([^'")]+)['"]?\)\s*;?/g;
+  let out = txt;
+  for (const m of [...txt.matchAll(importRe)]) {
+    if (/^https?:/i.test(m[1])) continue;
+    out = out.replace(m[0], await inlineCss(dir + m[1], seen));
+  }
+  return out;
+}
+
+interface SlotVal { u?: string; s?: number; x?: number; y?: number }
+type Sidecar = Record<string, SlotVal | string>;
+
+function getSidecar(): Sidecar {
+  try { return JSON.parse(localStorage.getItem(SLOT_KEY) || '{}'); } catch { return {}; }
+}
+
+function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | null {
+  const m = dataUrl.match(/^data:image\/([a-z0-9.+-]+);base64,(.*)$/i);
+  if (!m) return null;
+  const ext = m[1].toLowerCase().replace('jpeg', 'jpg');
+  const bin = atob(m[2]);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return { bytes, ext };
+}
+
+async function getReactUMD(): Promise<{ react: string; reactDom: string } | null> {
+  try {
+    const [react, reactDom] = await Promise.all([fetchText(REACT_URL), fetchText(REACTDOM_URL)]);
+    return { react, reactDom };
+  } catch { return null; }
+}
+
+function escapeHtml(s: string): string {
+  return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string));
+}
+
+function escapeInlineScript(js: string): string {
+  return js.replace(/<\/script/gi, '<\\/script');
+}
+
+// Relaxa o image-slot exportado para aceitar caminhos relativos de assets.
+function relaxImageSlot(js: string): string {
+  return js.replace(/!\/\^data:image\\\/\/i\.test\(stored\.u\)/g, '!/^(data:image\\/|assets\\/)/i.test(stored.u)')
+           .replace(/!\/\^data:image\/i\.test\(stored\.u\)/g, '!/^(data:image|assets\\/)/i.test(stored.u)');
+}
+
+// ── Template da página ──────────────────────────────────────────────────────
+interface PageOpts {
+  doc: Doc;
+  inline: boolean;                 // true = autocontido; false = assets externos
+  bundleJs: string;
+  stylesCss: string;
+  imageSlotJs: string;
+  sidecar: Sidecar;                // já com URLs corretas (data: ou assets/)
+  react: { react: string; reactDom: string } | null;
+  scorm?: boolean;
+  print?: boolean;
+  autoPrint?: boolean;
+}
+
+function buildPageHtml(o: PageOpts): string {
+  const title = o.doc.meta.title || 'Conteúdo';
+  const lang = o.doc.meta.lang || 'pt-BR';
+  const data = JSON.stringify(o.doc).replace(/</g, '\\u003c');
+  const sidecarJson = JSON.stringify(o.sidecar).replace(/</g, '\\u003c');
+
+  const reactTags = o.react
+    ? (o.inline
+        ? `<script>${escapeInlineScript(o.react.react)}</script>\n<script>${escapeInlineScript(o.react.reactDom)}</script>`
+        : `<script src="assets/react.js"></script>\n<script src="assets/react-dom.js"></script>`)
+    : `<script src="${REACT_URL}" crossorigin></script>\n<script src="${REACTDOM_URL}" crossorigin></script>`;
+
+  const cssTag = o.inline ? `<style>${o.stylesCss}\n${BUILDER_EXPORT_CSS}</style>` : `<link rel="stylesheet" href="assets/styles.css">\n<style>${BUILDER_EXPORT_CSS}</style>`;
+  const slotTag = o.inline ? `<script>${escapeInlineScript(o.imageSlotJs)}</script>` : `<script src="assets/image-slot.js"></script>`;
+  const bundleTag = o.inline ? `<script>${escapeInlineScript(o.bundleJs)}</script>` : `<script src="assets/_ds_bundle.js"></script>`;
+  const printFlag = o.print ? `<script>window.__SPU_PRINT=true;</script>` : '';
+  const printCss = o.print ? `<style>
+@page { size: A4; margin: 16mm 14mm; }
+html { background: #d8d5cd; }
+body { margin: 0; background: #d8d5cd; }
+#root {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 24px auto;
+  background: var(--color-page, #fffdf8);
+  box-shadow: 0 16px 40px rgba(0,0,0,.16);
+}
+.spu-print-shell { overflow: visible; }
+.spu-print-answer-key {
+  max-width: var(--container-content);
+  margin: var(--space-8) auto 0;
+  padding: var(--space-4) 0 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+}
+.spu-print-answer-key__title {
+  margin: 0 0 var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.spu-print-answer-key ol {
+  margin: 0;
+  padding-left: 1.5em;
+  columns: 2;
+}
+.spu-print-answer-key li { break-inside: avoid; margin: 0 0 .25em; }
+@media print {
+  html, body, #root { background: transparent; }
+  #root { width: auto; min-height: 0; margin: 0; box-shadow: none; }
+}
+</style>` : '';
+
+  // Override do fetch do sidecar (funciona em file://; imagens carregam via <img src>).
+  const sidecarScript = `<script>(function(){var DATA=${sidecarJson};var f=window.fetch?window.fetch.bind(window):null;window.fetch=function(i,n){var u=typeof i==='string'?i:(i&&i.url)||'';if(u&&u.indexOf('${SLOT_FILE}')>=0){return Promise.resolve(new Response(JSON.stringify(DATA),{headers:{'Content-Type':'application/json'}}));}return f?f(i,n):Promise.reject(new Error('no fetch'));};})();</script>`;
+
+  const scormTag = o.scorm ? `<script src="scorm-api.js"></script>` : '';
+
+  return `<!DOCTYPE html>
+<html lang="${lang}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)}</title>
+${reactTags}
+${cssTag}
+${printCss}
+${sidecarScript}
+${scormTag}
+${printFlag}
+</head>
+<body${o.print ? ' class="spu-print-body"' : ''}>
+<div id="root"></div>
+<script id="spu-doc" type="application/json">${data}</script>
+<script id="spu-image-slots" type="application/json">${sidecarJson}</script>
+${slotTag}
+${bundleTag}
+<script>
+(function () {
+  var LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  function walkBlocks(blocks, visit) {
+    (blocks || []).forEach(function (block) {
+      visit(block);
+      if (block.children) walkBlocks(block.children, visit);
+    });
+  }
+  function QuizAnswerKey(props) {
+    var keys = [];
+    walkBlocks(props.doc && props.doc.blocks, function (block) {
+      if (block.type !== 'quiz') return;
+      var questions = block.props && block.props.questions || [];
+      questions.forEach(function (q) {
+        var idx = (q.options || []).findIndex(function (o) { return !!o.correct; });
+        if (idx >= 0) keys.push(LETTERS[idx] || String(idx + 1));
+      });
+    });
+    if (!keys.length) return null;
+    return React.createElement('section', { className: 'spu-print-answer-key' },
+      React.createElement('p', { className: 'spu-print-answer-key__title' }, 'Gabarito'),
+      React.createElement('ol', null, keys.map(function (k, i) {
+        return React.createElement('li', { key: i }, k);
+      }))
+    );
+  }
+  function start(tries){
+    var NS = window[Object.keys(window).filter(function(k){return /DesignSystem/.test(k);})[0]];
+    if (!NS || !NS.BlockDocument) { if(tries>0) return setTimeout(function(){start(tries-1);},50);
+      document.getElementById('root').textContent = 'Kit do design system não carregado.'; return; }
+    var doc = JSON.parse(document.getElementById('spu-doc').textContent);
+    var GlossaryFootnotes = NS.GlossaryFootnotes;
+    var children = [React.createElement(NS.BlockDocument, { key: 'doc', doc: doc, mode: 'preview' })];
+    if (${o.print ? 'true' : 'false'} && GlossaryFootnotes) {
+      children.push(React.createElement(GlossaryFootnotes, { key: 'gloss', title: 'Glossário' }));
+      children.push(React.createElement(QuizAnswerKey, { key: 'quiz-key', doc: doc }));
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(
+      React.createElement('div', { className: ${o.print ? "'spu-print-shell'" : "''"} }, children));
+    setTimeout(function(){ if(window.__SPU_ENHANCE_GLOSSARY) window.__SPU_ENHANCE_GLOSSARY(); }, 80);
+    ${o.print && o.autoPrint ? "setTimeout(function(){ window.print(); }, 450);" : ''}
+  }
+  start(40);
+})();
+</script>
+<script>${escapeInlineScript(GLOSSARY_ENHANCER_JS)}</script>
+</body>
+</html>`;
+}
+
+function download(filename: string, content: Uint8Array | string, mime: string) {
+  const blob = new Blob([content as BlobPart], { type: mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+
+const safe = (s: string) => (s || 'conteudo').replace(/[^\w\-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'conteudo';
+
+// ── 1) HTML autocontido ─────────────────────────────────────────────────────
+export async function exportSelfContained(doc: Doc) {
+  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+    fetchText(DS_BASE + '_ds_bundle.js'),
+    inlineCss(DS_BASE + 'styles.css'),
+    fetchText(DS_BASE + 'image-slot.js'),
+  ]);
+  const bundleJs = relaxImageSlot(bundleJsRaw);
+  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
+  const react = await getReactUMD();
+  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, imageSlotJs, sidecar: getSidecar(), react });
+  download(safe(doc.meta.title) + '.html', html, 'text/html;charset=utf-8');
+}
+
+// Extrai imagens do sidecar para arquivos e devolve sidecar com caminhos relativos.
+function externalizeImages(files: Record<string, Uint8Array>): Sidecar {
+  const src = getSidecar();
+  const out: Sidecar = {};
+  let n = 0;
+  for (const id of Object.keys(src)) {
+    const v = src[id];
+    const url = typeof v === 'string' ? v : v.u;
+    const dec = url ? dataUrlToBytes(url) : null;
+    if (!dec) continue;
+    const name = `assets/images/img-${n++}-${safe(id).slice(0, 24)}.${dec.ext}`;
+    files[name] = dec.bytes;
+    const meta = typeof v === 'string' ? {} : v;
+    out[id] = { ...meta, u: name };
+  }
+  return out;
+}
+
+// ── 2) Pacote HTML + assets (.zip) ───────────────────────────────────────────
+export async function exportAssetsZip(doc: Doc) {
+  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+    fetchText(DS_BASE + '_ds_bundle.js'),
+    inlineCss(DS_BASE + 'styles.css'),
+    fetchText(DS_BASE + 'image-slot.js'),
+  ]);
+  const react = await getReactUMD();
+  const files: Record<string, Uint8Array> = {};
+  const sidecar = externalizeImages(files);
+  const bundleJs = relaxImageSlot(bundleJsRaw);
+  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
+
+  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, imageSlotJs, sidecar, react });
+  files['index.html'] = strToU8(html);
+  files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
+  files['assets/_ds_bundle.js'] = strToU8(bundleJs);
+  files['assets/styles.css'] = strToU8(stylesCss);
+  files['assets/image-slot.js'] = strToU8(imageSlotJs);
+  if (react) {
+    files['assets/react.js'] = strToU8(react.react);
+    files['assets/react-dom.js'] = strToU8(react.reactDom);
+  }
+  download(safe(doc.meta.title) + '-html.zip', zipSync(files), 'application/zip');
+}
+
+// ── 3) SCORM 1.2 não-avaliativo (.zip) ───────────────────────────────────────
+function imsmanifest(doc: Doc): string {
+  const id = 'SPU_' + safe(doc.meta.title).replace(/-/g, '_');
+  const title = escapeHtml(doc.meta.title || 'Conteúdo');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<manifest identifier="${id}" version="1.2"
+  xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2"
+  xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd
+    http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata><schema>ADL SCORM</schema><schemaversion>1.2</schemaversion></metadata>
+  <organizations default="ORG">
+    <organization identifier="ORG">
+      <title>${title}</title>
+      <item identifier="ITEM" identifierref="RES"><title>${title}</title></item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="RES" type="webcontent" adlcp:scormtype="sco" href="index.html">
+      <file href="index.html"/>
+      <file href="scorm-api.js"/>
+    </resource>
+  </resources>
+</manifest>`;
+}
+
+// Wrapper SCORM 1.2 não-avaliativo: marca "completed" ao abrir, sem nota.
+const SCORM_API_JS = `(function(){
+  function find(w,d){ while(w){ if(w.API) return w.API; if(w.parent===w) break; w=w.parent; } return null; }
+  var API = find(window) || (window.opener && find(window.opener));
+  function call(m,a,b){ try{ return API && API[m] ? API[m](a==null?'':a, b==null?'':b) : ''; }catch(e){ return ''; } }
+  if (API) {
+    call('LMSInitialize','');
+    var st = call('LMSGetValue','cmi.core.lesson_status');
+    if (st==='not attempted' || st==='' || st==='unknown') call('LMSSetValue','cmi.core.lesson_status','completed');
+    call('LMSSetValue','cmi.core.lesson_mode','browse');
+    call('LMSCommit','');
+    window.addEventListener('unload', function(){ call('LMSCommit',''); call('LMSFinish',''); });
+  }
+})();`;
+
+export async function exportScormZip(doc: Doc) {
+  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+    fetchText(DS_BASE + '_ds_bundle.js'),
+    inlineCss(DS_BASE + 'styles.css'),
+    fetchText(DS_BASE + 'image-slot.js'),
+  ]);
+  const react = await getReactUMD();
+  const files: Record<string, Uint8Array> = {};
+  const sidecar = externalizeImages(files);
+  const bundleJs = relaxImageSlot(bundleJsRaw);
+  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
+
+  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, imageSlotJs, sidecar, react, scorm: true });
+  files['index.html'] = strToU8(html);
+  files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
+  files['imsmanifest.xml'] = strToU8(imsmanifest(doc));
+  files['scorm-api.js'] = strToU8(SCORM_API_JS);
+  files['assets/_ds_bundle.js'] = strToU8(bundleJs);
+  files['assets/styles.css'] = strToU8(stylesCss);
+  files['assets/image-slot.js'] = strToU8(imageSlotJs);
+  if (react) {
+    files['assets/react.js'] = strToU8(react.react);
+    files['assets/react-dom.js'] = strToU8(react.reactDom);
+  }
+  download(safe(doc.meta.title) + '-scorm.zip', zipSync(files), 'application/zip');
+}
