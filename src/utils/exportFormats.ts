@@ -320,6 +320,7 @@ function buildPageHtml(o: PageOpts): string {
 html { background: #d8d5cd; }
 body { margin: 0; background: #d8d5cd; }
 #root {
+  --spu-print-image-max-height: 89mm;
   width: 210mm;
   min-height: 297mm;
   margin: 24px auto;
@@ -328,27 +329,57 @@ body { margin: 0; background: #d8d5cd; }
   background: var(--color-page, #fffdf8);
   box-shadow: 0 16px 40px rgba(0,0,0,.16);
 }
-.spu-print-shell { overflow: visible; }
+.spu-print-shell { overflow-x: hidden; }
+.spu-print-shell .spu-section,
+.spu-print-shell .spu-fullbleed--bleed,
+.spu-print-shell .spu-bleedimg--bleed,
+.spu-print-shell .spu-panel--feature {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  transform: none !important;
+}
+.spu-print-shell .spu-section__inner { max-width: 100% !important; }
+.spu-print-shell .spu-fullbleed { border-radius: 0; }
+.spu-print-shell .spu-bleedimg__parallax { background-attachment: scroll !important; }
+.spu-print-shell .spu-pagetoc { display: none !important; }
 .spu-print-shell .spu-figure,
 .spu-print-shell .spu-map,
 .spu-print-shell .spu-bleedimg,
 .spu-print-shell .spu-reveal,
-.spu-print-shell .spu-reveal-print figure { break-inside: avoid; }
+.spu-print-shell .spu-reveal-print figure,
+.spu-print-shell .spu-examplecard__cover,
+.spu-print-shell .spu-acc__media,
+.spu-print-shell .spu-tl__media,
+.spu-print-shell .spu-twi__media { break-inside: avoid; }
 .spu-print-shell .spu-figure__frame,
 .spu-print-shell .spu-map__frame,
 .spu-print-shell .spu-bleedimg__frame,
 .spu-print-shell .spu-reveal,
-.spu-print-shell .spu-reveal-print figure { max-height: 165mm !important; overflow: hidden; }
+.spu-print-shell .spu-reveal-print figure,
+.spu-print-shell .spu-examplecard__cover,
+.spu-print-shell .spu-acc__media,
+.spu-print-shell .spu-tl__media,
+.spu-print-shell .spu-twi__media { max-height: var(--spu-print-image-max-height) !important; overflow: hidden; }
 .spu-print-shell .spu-figure__frame img,
 .spu-print-shell .spu-map__img,
 .spu-print-shell .spu-bleedimg__frame img,
 .spu-print-shell .spu-reveal img,
 .spu-print-shell .spu-reveal-print img,
+.spu-print-shell .spu-examplecard__cover img,
+.spu-print-shell .spu-acc__media img,
+.spu-print-shell .spu-tl__media img,
+.spu-print-shell .spu-twi__media img,
 .spu-print-shell .spu-figure__frame > image-slot,
 .spu-print-shell .spu-map__frame image-slot,
 .spu-print-shell .spu-bleedimg__frame image-slot,
 .spu-print-shell .spu-reveal image-slot,
-.spu-print-shell .spu-reveal-print image-slot { max-height: 160mm !important; object-fit: contain !important; }
+.spu-print-shell .spu-reveal-print image-slot,
+.spu-print-shell .spu-examplecard__cover image-slot,
+.spu-print-shell .spu-acc__media image-slot,
+.spu-print-shell .spu-tl__media image-slot,
+.spu-print-shell .spu-twi__media image-slot { max-height: var(--spu-print-image-max-height) !important; object-fit: contain !important; }
 .spu-print-answer-key {
   max-width: var(--container-content);
   margin: var(--space-8) auto 0;

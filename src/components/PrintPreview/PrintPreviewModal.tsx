@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ComponentType } from 'react';
 import type { Block, Doc, NS } from '../../types/ds';
 import { collectRichNotes } from '../../utils/richNotes';
 import styles from './PrintPreviewModal.module.css';
@@ -95,11 +94,9 @@ function stripPrintMarkers(block: Block): Block {
 export function PrintPreviewModal({ ns, doc, onClose }: Props) {
   const [printModeReady, setPrintModeReady] = useState(false);
   const BlockView = ns.BlockView;
-  const PageToc = ns.PageToc as undefined | ComponentType<{ items?: unknown[]; title?: string }>;
   const printDoc = useMemo(() => preparePrintDoc(doc), [doc]);
   const answerKeys = useMemo(() => collectQuizKeys(printDoc.blocks), [printDoc.blocks]);
   const richNotes = useMemo(() => collectRichNotes(printDoc.blocks), [printDoc.blocks]);
-  const toc = printDoc.meta.toc;
 
   useEffect(() => {
     const win = window as unknown as { __SPU_PRINT?: boolean };
@@ -137,7 +134,6 @@ export function PrintPreviewModal({ ns, doc, onClose }: Props) {
       <main className={styles.sheet}>
         {printModeReady && (
           <>
-            {toc && toc.enabled !== false && PageToc && <PageToc items={toc.items || []} title={toc.title} />}
             {printDoc.blocks.map((block) => (
               <div
                 key={block.id}

@@ -1,7 +1,7 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 1000;
   overflow: auto;
   background: color-mix(in srgb, var(--ink-900) 18%, var(--sand-100));
   padding: 72px 24px 32px;
@@ -12,7 +12,7 @@
   top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: 1001;
   width: min(760px, calc(100vw - 32px));
   display: flex;
   align-items: center;
@@ -67,12 +67,87 @@
 }
 
 .sheet {
+  --spu-print-image-max-height: 89mm;
   width: 210mm;
   min-height: 297mm;
   margin: 0 auto;
   background: var(--color-page);
   box-shadow: 0 18px 54px rgba(0, 0, 0, .2);
-  overflow: visible;
+  overflow-x: hidden;
+}
+
+.sheet :global(.spu-section),
+.sheet :global(.spu-fullbleed--bleed),
+.sheet :global(.spu-bleedimg--bleed),
+.sheet :global(.spu-panel--feature) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  transform: none !important;
+}
+
+.sheet :global(.spu-section__inner) {
+  max-width: 100% !important;
+}
+
+.sheet :global(.spu-fullbleed) {
+  border-radius: 0;
+}
+
+.sheet :global(.spu-bleedimg__parallax) {
+  background-attachment: scroll !important;
+}
+
+.sheet :global(.spu-pagetoc) {
+  display: none !important;
+}
+
+.sheet :global(.spu-figure),
+.sheet :global(.spu-map),
+.sheet :global(.spu-bleedimg),
+.sheet :global(.spu-reveal),
+.sheet :global(.spu-reveal-print figure),
+.sheet :global(.spu-examplecard__cover),
+.sheet :global(.spu-acc__media),
+.sheet :global(.spu-tl__media),
+.sheet :global(.spu-twi__media) {
+  break-inside: avoid;
+}
+
+.sheet :global(.spu-figure__frame),
+.sheet :global(.spu-map__frame),
+.sheet :global(.spu-bleedimg__frame),
+.sheet :global(.spu-reveal),
+.sheet :global(.spu-reveal-print figure),
+.sheet :global(.spu-examplecard__cover),
+.sheet :global(.spu-acc__media),
+.sheet :global(.spu-tl__media),
+.sheet :global(.spu-twi__media) {
+  max-height: var(--spu-print-image-max-height) !important;
+  overflow: hidden;
+}
+
+.sheet :global(.spu-figure__frame img),
+.sheet :global(.spu-map__img),
+.sheet :global(.spu-bleedimg__frame img),
+.sheet :global(.spu-reveal img),
+.sheet :global(.spu-reveal-print img),
+.sheet :global(.spu-examplecard__cover img),
+.sheet :global(.spu-acc__media img),
+.sheet :global(.spu-tl__media img),
+.sheet :global(.spu-twi__media img),
+.sheet :global(.spu-figure__frame > image-slot),
+.sheet :global(.spu-map__frame image-slot),
+.sheet :global(.spu-bleedimg__frame image-slot),
+.sheet :global(.spu-reveal image-slot),
+.sheet :global(.spu-reveal-print image-slot),
+.sheet :global(.spu-examplecard__cover image-slot),
+.sheet :global(.spu-acc__media image-slot),
+.sheet :global(.spu-tl__media image-slot),
+.sheet :global(.spu-twi__media image-slot) {
+  max-height: var(--spu-print-image-max-height) !important;
+  object-fit: contain !important;
 }
 
 .pageBreakBefore {
@@ -166,34 +241,4 @@
     background: transparent;
   }
 
-  .sheet :global(.spu-figure),
-  .sheet :global(.spu-map),
-  .sheet :global(.spu-bleedimg),
-  .sheet :global(.spu-reveal),
-  .sheet :global(.spu-reveal-print figure) {
-    break-inside: avoid;
-  }
-
-  .sheet :global(.spu-figure__frame),
-  .sheet :global(.spu-map__frame),
-  .sheet :global(.spu-bleedimg__frame),
-  .sheet :global(.spu-reveal),
-  .sheet :global(.spu-reveal-print figure) {
-    max-height: 165mm !important;
-    overflow: hidden;
-  }
-
-  .sheet :global(.spu-figure__frame img),
-  .sheet :global(.spu-map__img),
-  .sheet :global(.spu-bleedimg__frame img),
-  .sheet :global(.spu-reveal img),
-  .sheet :global(.spu-reveal-print img),
-  .sheet :global(.spu-figure__frame > image-slot),
-  .sheet :global(.spu-map__frame image-slot),
-  .sheet :global(.spu-bleedimg__frame image-slot),
-  .sheet :global(.spu-reveal image-slot),
-  .sheet :global(.spu-reveal-print image-slot) {
-    max-height: 160mm !important;
-    object-fit: contain !important;
-  }
 }
