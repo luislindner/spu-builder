@@ -139,6 +139,11 @@
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
   .backdrop {
     position: static;
     inset: auto;
@@ -155,7 +160,40 @@
     width: auto;
     min-height: 0;
     margin: 0;
+    padding-block: 10mm;
+    box-sizing: border-box;
     box-shadow: none;
     background: transparent;
+  }
+
+  .sheet :global(.spu-figure),
+  .sheet :global(.spu-map),
+  .sheet :global(.spu-bleedimg),
+  .sheet :global(.spu-reveal),
+  .sheet :global(.spu-reveal-print figure) {
+    break-inside: avoid;
+  }
+
+  .sheet :global(.spu-figure__frame),
+  .sheet :global(.spu-map__frame),
+  .sheet :global(.spu-bleedimg__frame),
+  .sheet :global(.spu-reveal),
+  .sheet :global(.spu-reveal-print figure) {
+    max-height: 165mm !important;
+    overflow: hidden;
+  }
+
+  .sheet :global(.spu-figure__frame img),
+  .sheet :global(.spu-map__img),
+  .sheet :global(.spu-bleedimg__frame img),
+  .sheet :global(.spu-reveal img),
+  .sheet :global(.spu-reveal-print img),
+  .sheet :global(.spu-figure__frame > image-slot),
+  .sheet :global(.spu-map__frame image-slot),
+  .sheet :global(.spu-bleedimg__frame image-slot),
+  .sheet :global(.spu-reveal image-slot),
+  .sheet :global(.spu-reveal-print image-slot) {
+    max-height: 160mm !important;
+    object-fit: contain !important;
   }
 }

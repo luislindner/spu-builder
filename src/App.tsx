@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useEffect, useState } from 'react';
+import { Component, useReducer, useCallback, useEffect, useState } from 'react';
 import {
   DndContext,
   type DragEndEvent,
@@ -31,6 +31,30 @@ import styles from './App.module.css';
 
 const AUTOSAVE_KEY = 'spu_builder_doc';
 type DropTarget = { parentId: string | null; index: number };
+
+class AppErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('SPU Builder render error', error);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
+          <h1>Erro ao renderizar o builder</h1>
+          <pre>{this.state.error.message}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
   const ns = useDS();
@@ -106,6 +130,10 @@ export default function App() {
     if (!ns) return;
     const structural: string[] = ns.BlockRegistry.structuralTypes;
     const block = ns.BlockRegistry.newBlock(type);
+    if (!block) {
+      console.error('Bloco desconhecido ou inválido:', type);
+      return;
+    }
 
     if (structural.includes(type)) {
       dispatch({ type: 'ADD_TOP', block });
@@ -119,6 +147,10 @@ export default function App() {
       dispatch({ type: 'ADD_CHILD', parentId: last.id, block });
     } else {
       const sec = ns.BlockRegistry.newBlock('section');
+      if (!sec) {
+        console.error('Não foi possível criar seção para o bloco:', type);
+        return;
+      }
       sec.children = [block];
       if (sec.props) (sec.props as Record<string, unknown>).children = [];
       dispatch({ type: 'ADD_TOP', block: sec });
@@ -281,13 +313,14 @@ export default function App() {
   };
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragOver={handleDragOver}
-      onDragCancel={() => setDropTarget(null)}
-      onDragEnd={handleDragEnd}
-    >
+    <AppErrorBoundary>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragOver={handleDragOver}
+        onDragCancel={() => setDropTarget(null)}
+        onDragEnd={handleDragEnd}
+      >
       <div className={styles.root} data-spu-app-shell>
         <Toolbar
           ns={ns}
@@ -328,6 +361,7 @@ export default function App() {
       </div>
       {previewing && <PreviewModal ns={ns} doc={state.doc} onClose={() => setPreviewing(false)} />}
       {printPreviewing && <PrintPreviewModal ns={ns} doc={state.doc} onClose={() => setPrintPreviewing(false)} />}
-    </DndContext>
+      </DndContext>
+    </AppErrorBoundary>
   );
 }

@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":3,"namespace":"SPUENAPAprendizagemDesignSystem_f0eeed","components":[{"name":"Callout","sourcePath":"components/content/Callout.jsx"},{"name":"Conclusion","sourcePath":"components/content/Conclusion.jsx"},{"name":"DataTable","sourcePath":"components/content/DataTable.jsx"},{"name":"SPU_MARKS","sourcePath":"components/content/Editable.jsx"},{"name":"Editable","sourcePath":"components/content/Editable.jsx"},{"name":"MarkToolbar","sourcePath":"components/content/Editable.jsx"},{"name":"ExampleCard","sourcePath":"components/content/ExampleCard.jsx"},{"name":"FeatureGrid","sourcePath":"components/content/FeatureGrid.jsx"},{"name":"LicenseBadge","sourcePath":"components/content/LicenseBadge.jsx"},{"name":"MarkerList","sourcePath":"components/content/MarkerList.jsx"},{"name":"Masthead","sourcePath":"components/content/Masthead.jsx"},{"name":"MediaEmbed","sourcePath":"components/content/MediaEmbed.jsx"},{"name":"PageFooter","sourcePath":"components/content/PageFooter.jsx"},{"name":"PageToc","sourcePath":"components/content/PageToc.jsx"},{"name":"Panel","sourcePath":"components/content/Panel.jsx"},{"name":"PullQuote","sourcePath":"components/content/PullQuote.jsx"},{"name":"ReferenceList","sourcePath":"components/content/ReferenceList.jsx"},{"name":"ReflectionStop","sourcePath":"components/content/ReflectionStop.jsx"},{"name":"ResourceList","sourcePath":"components/content/ResourceList.jsx"},{"name":"RichText","sourcePath":"components/content/RichText.jsx"},{"name":"RichTextLinkNotes","sourcePath":"components/content/RichText.jsx"},{"name":"StatBlock","sourcePath":"components/content/StatBlock.jsx"},{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"BlockRegistry","sourcePath":"components/core/BlockRegistry.jsx"},{"name":"BlockView","sourcePath":"components/core/BlockView.jsx"},{"name":"BlockDocument","sourcePath":"components/core/BlockView.jsx"},{"name":"BuilderExport","sourcePath":"components/core/BuilderExport.jsx"},{"name":"BuilderManifest","sourcePath":"components/core/BuilderManifest.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"ICONS","sourcePath":"components/core/Icon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"ICON_NAMES","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"IconGallery","sourcePath":"components/core/IconGallery.jsx"},{"name":"Kicker","sourcePath":"components/core/Kicker.jsx"},{"name":"Tag","sourcePath":"components/core/Tag.jsx"},{"name":"TONES","sourcePath":"components/core/dsutil.js"},{"name":"Accordion","sourcePath":"components/interactive/Accordion.jsx"},{"name":"Carousel","sourcePath":"components/interactive/Carousel.jsx"},{"name":"CompareAB","sourcePath":"components/interactive/CompareAB.jsx"},{"name":"Flipcard","sourcePath":"components/interactive/Flipcard.jsx"},{"name":"GlossaryTerm","sourcePath":"components/interactive/GlossaryTerm.jsx"},{"name":"GlossaryFootnotes","sourcePath":"components/interactive/GlossaryTerm.jsx"},{"name":"Quiz","sourcePath":"components/interactive/Quiz.jsx"},{"name":"Timeline","sourcePath":"components/interactive/Timeline.jsx"},{"name":"Columns","sourcePath":"components/layout/Columns.jsx"},{"name":"Section","sourcePath":"components/layout/Section.jsx"},{"name":"Stack","sourcePath":"components/layout/Stack.jsx"},{"name":"BleedImage","sourcePath":"components/media/BleedImage.jsx"},{"name":"Figure","sourcePath":"components/media/Figure.jsx"},{"name":"FullBleed","sourcePath":"components/media/FullBleed.jsx"},{"name":"Hero","sourcePath":"components/media/Hero.jsx"},{"name":"ImageReveal","sourcePath":"components/media/ImageReveal.jsx"},{"name":"MapFigure","sourcePath":"components/media/MapFigure.jsx"},{"name":"TextWithImage","sourcePath":"components/media/TextWithImage.jsx"}],"sourceHashes":{"assets/image-slot.js":"10eda37fc4b6","components/content/Callout.jsx":"bd58dd54d81d","components/content/Conclusion.jsx":"589825d07720","components/content/DataTable.jsx":"20c19a77bb43","components/content/Editable.jsx":"948f4ad224ac","components/content/ExampleCard.jsx":"b0c4401e810e","components/content/FeatureGrid.jsx":"73483b6aa40f","components/content/LicenseBadge.jsx":"d7bb5223e8b9","components/content/MarkerList.jsx":"34132f9fb514","components/content/Masthead.jsx":"c8989c1bf1db","components/content/MediaEmbed.jsx":"7c088cb9fcf6","components/content/PageFooter.jsx":"2cbea0b0226a","components/content/PageToc.jsx":"f0d414a77e1c","components/content/Panel.jsx":"da016587de7f","components/content/PullQuote.jsx":"97a06ec30f66","components/content/ReferenceList.jsx":"647d974852a2","components/content/ReflectionStop.jsx":"a9a91b578040","components/content/ResourceList.jsx":"581496fe0d7f","components/content/RichText.jsx":"259fa96a3ce3","components/content/StatBlock.jsx":"8514b272210a","components/core/Badge.jsx":"b86936c39ee7","components/core/BlockRegistry.jsx":"379d69e7b55c","components/core/BlockView.jsx":"7f8d8f4075b5","components/core/BuilderExport.jsx":"a45c5b641dbc","components/core/BuilderManifest.jsx":"523b56ed9db6","components/core/Button.jsx":"21da7fca4d84","components/core/Icon.jsx":"6dc631bd7624","components/core/IconButton.jsx":"b970b9113c67","components/core/IconGallery.jsx":"dfd6a321e4c6","components/core/Kicker.jsx":"9659157f9138","components/core/Tag.jsx":"acc015185ba8","components/core/dsutil.js":"fc02ab4b5f88","components/interactive/Accordion.jsx":"1d2c04d12b14","components/interactive/Carousel.jsx":"c7ee0d537698","components/interactive/CompareAB.jsx":"62d72283f972","components/interactive/Flipcard.jsx":"bb5f18b5ea23","components/interactive/GlossaryTerm.jsx":"afbbad1d3950","components/interactive/Quiz.jsx":"6276b4b3ce26","components/interactive/Timeline.jsx":"429d4c3a0ed3","components/layout/Columns.jsx":"81e84a9fd3f8","components/layout/Section.jsx":"1e289ae20f66","components/layout/Stack.jsx":"82de9c89f0ff","components/media/BleedImage.jsx":"32c55fed767a","components/media/Figure.jsx":"bc724ebf2386","components/media/FullBleed.jsx":"47735f8e8b78","components/media/Hero.jsx":"08f65cb71a96","components/media/ImageReveal.jsx":"a7b9d6c60b1f","components/media/MapFigure.jsx":"2a1654d5b994","components/media/TextWithImage.jsx":"f719c8b8bf73","export/src/page.jsx":"edbd2371497e","m122/page.jsx":"d19ee4a927e1","m122web/js/app.js":"bcc3d7cdd08e"},"inlinedExternals":[],"unexposedExports":[{"name":"applyColor","sourcePath":"components/content/Editable.jsx"},{"name":"applyEmphasis","sourcePath":"components/content/Editable.jsx"},{"name":"applyHighlight","sourcePath":"components/content/Editable.jsx"},{"name":"applyLink","sourcePath":"components/content/Editable.jsx"},{"name":"applyTerm","sourcePath":"components/content/Editable.jsx"},{"name":"clearMarks","sourcePath":"components/content/Editable.jsx"},{"name":"cx","sourcePath":"components/core/dsutil.js"},{"name":"injectCss","sourcePath":"components/core/dsutil.js"},{"name":"isPrint","sourcePath":"components/core/dsutil.js"},{"name":"itemExtras","sourcePath":"components/interactive/Accordion.jsx"},{"name":"renderRich","sourcePath":"components/content/RichText.jsx"}]} */
+/* @ds-bundle: {"format":3,"namespace":"SPUENAPAprendizagemDesignSystem_f0eeed","components":[{"name":"Callout","sourcePath":"components/content/Callout.jsx"},{"name":"Conclusion","sourcePath":"components/content/Conclusion.jsx"},{"name":"DataTable","sourcePath":"components/content/DataTable.jsx"},{"name":"SPU_MARKS","sourcePath":"components/content/Editable.jsx"},{"name":"Editable","sourcePath":"components/content/Editable.jsx"},{"name":"MarkToolbar","sourcePath":"components/content/Editable.jsx"},{"name":"ExampleCard","sourcePath":"components/content/ExampleCard.jsx"},{"name":"FeatureGrid","sourcePath":"components/content/FeatureGrid.jsx"},{"name":"LicenseBadge","sourcePath":"components/content/LicenseBadge.jsx"},{"name":"MarkerList","sourcePath":"components/content/MarkerList.jsx"},{"name":"Masthead","sourcePath":"components/content/Masthead.jsx"},{"name":"MediaEmbed","sourcePath":"components/content/MediaEmbed.jsx"},{"name":"PageFooter","sourcePath":"components/content/PageFooter.jsx"},{"name":"PageToc","sourcePath":"components/content/PageToc.jsx"},{"name":"Panel","sourcePath":"components/content/Panel.jsx"},{"name":"PullQuote","sourcePath":"components/content/PullQuote.jsx"},{"name":"ReferenceList","sourcePath":"components/content/ReferenceList.jsx"},{"name":"ReflectionStop","sourcePath":"components/content/ReflectionStop.jsx"},{"name":"ResourceList","sourcePath":"components/content/ResourceList.jsx"},{"name":"RichText","sourcePath":"components/content/RichText.jsx"},{"name":"RichTextLinkNotes","sourcePath":"components/content/RichText.jsx"},{"name":"StatBlock","sourcePath":"components/content/StatBlock.jsx"},{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"BlockRegistry","sourcePath":"components/core/BlockRegistry.jsx"},{"name":"BlockView","sourcePath":"components/core/BlockView.jsx"},{"name":"BlockDocument","sourcePath":"components/core/BlockView.jsx"},{"name":"BuilderExport","sourcePath":"components/core/BuilderExport.jsx"},{"name":"BuilderManifest","sourcePath":"components/core/BuilderManifest.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"ICONS","sourcePath":"components/core/Icon.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"ICON_NAMES","sourcePath":"components/core/Icon.jsx"},{"name":"IconButton","sourcePath":"components/core/IconButton.jsx"},{"name":"IconGallery","sourcePath":"components/core/IconGallery.jsx"},{"name":"Kicker","sourcePath":"components/core/Kicker.jsx"},{"name":"Tag","sourcePath":"components/core/Tag.jsx"},{"name":"TONES","sourcePath":"components/core/dsutil.js"},{"name":"Accordion","sourcePath":"components/interactive/Accordion.jsx"},{"name":"Carousel","sourcePath":"components/interactive/Carousel.jsx"},{"name":"CompareAB","sourcePath":"components/interactive/CompareAB.jsx"},{"name":"Flipcard","sourcePath":"components/interactive/Flipcard.jsx"},{"name":"GlossaryTerm","sourcePath":"components/interactive/GlossaryTerm.jsx"},{"name":"GlossaryFootnotes","sourcePath":"components/interactive/GlossaryTerm.jsx"},{"name":"Quiz","sourcePath":"components/interactive/Quiz.jsx"},{"name":"Timeline","sourcePath":"components/interactive/Timeline.jsx"},{"name":"Columns","sourcePath":"components/layout/Columns.jsx"},{"name":"Section","sourcePath":"components/layout/Section.jsx"},{"name":"Stack","sourcePath":"components/layout/Stack.jsx"},{"name":"BleedImage","sourcePath":"components/media/BleedImage.jsx"},{"name":"Figure","sourcePath":"components/media/Figure.jsx"},{"name":"FullBleed","sourcePath":"components/media/FullBleed.jsx"},{"name":"Hero","sourcePath":"components/media/Hero.jsx"},{"name":"ImageReveal","sourcePath":"components/media/ImageReveal.jsx"},{"name":"MapFigure","sourcePath":"components/media/MapFigure.jsx"},{"name":"TextWithImage","sourcePath":"components/media/TextWithImage.jsx"}],"sourceHashes":{"assets/image-slot.js":"10eda37fc4b6","components/content/Callout.jsx":"bd58dd54d81d","components/content/Conclusion.jsx":"5557ec112356","components/content/DataTable.jsx":"20c19a77bb43","components/content/Editable.jsx":"948f4ad224ac","components/content/ExampleCard.jsx":"b0c4401e810e","components/content/FeatureGrid.jsx":"73483b6aa40f","components/content/LicenseBadge.jsx":"d7bb5223e8b9","components/content/MarkerList.jsx":"48df5ca9db36","components/content/Masthead.jsx":"2a725bb93d83","components/content/MediaEmbed.jsx":"7c088cb9fcf6","components/content/PageFooter.jsx":"659480858749","components/content/PageToc.jsx":"f0d414a77e1c","components/content/Panel.jsx":"da016587de7f","components/content/PullQuote.jsx":"97a06ec30f66","components/content/ReferenceList.jsx":"647d974852a2","components/content/ReflectionStop.jsx":"a9a91b578040","components/content/ResourceList.jsx":"581496fe0d7f","components/content/RichText.jsx":"259fa96a3ce3","components/content/StatBlock.jsx":"39d8c99d4ada","components/core/Badge.jsx":"b86936c39ee7","components/core/BlockRegistry.jsx":"b93deeaace82","components/core/BlockView.jsx":"7f8d8f4075b5","components/core/BuilderExport.jsx":"a45c5b641dbc","components/core/BuilderManifest.jsx":"523b56ed9db6","components/core/Button.jsx":"21da7fca4d84","components/core/Icon.jsx":"6dc631bd7624","components/core/IconButton.jsx":"b970b9113c67","components/core/IconGallery.jsx":"dfd6a321e4c6","components/core/Kicker.jsx":"9659157f9138","components/core/Tag.jsx":"acc015185ba8","components/core/dsutil.js":"fc02ab4b5f88","components/interactive/Accordion.jsx":"75af244b9487","components/interactive/Carousel.jsx":"c7ee0d537698","components/interactive/CompareAB.jsx":"8e0b859fa2aa","components/interactive/Flipcard.jsx":"bb5f18b5ea23","components/interactive/GlossaryTerm.jsx":"afbbad1d3950","components/interactive/Quiz.jsx":"6276b4b3ce26","components/interactive/Timeline.jsx":"9293f664e504","components/layout/Columns.jsx":"81e84a9fd3f8","components/layout/Section.jsx":"1e289ae20f66","components/layout/Stack.jsx":"82de9c89f0ff","components/media/BleedImage.jsx":"32c55fed767a","components/media/Figure.jsx":"bc724ebf2386","components/media/FullBleed.jsx":"47735f8e8b78","components/media/Hero.jsx":"08f65cb71a96","components/media/ImageReveal.jsx":"a7b9d6c60b1f","components/media/MapFigure.jsx":"ab65cfefa66c","components/media/TextWithImage.jsx":"f719c8b8bf73","export/src/page.jsx":"edbd2371497e","m122/page.jsx":"d19ee4a927e1","m122web/js/app.js":"bcc3d7cdd08e"},"inlinedExternals":[],"unexposedExports":[{"name":"applyColor","sourcePath":"components/content/Editable.jsx"},{"name":"applyEmphasis","sourcePath":"components/content/Editable.jsx"},{"name":"applyHighlight","sourcePath":"components/content/Editable.jsx"},{"name":"applyLink","sourcePath":"components/content/Editable.jsx"},{"name":"applyTerm","sourcePath":"components/content/Editable.jsx"},{"name":"clearMarks","sourcePath":"components/content/Editable.jsx"},{"name":"cx","sourcePath":"components/core/dsutil.js"},{"name":"injectCss","sourcePath":"components/core/dsutil.js"},{"name":"isPrint","sourcePath":"components/core/dsutil.js"},{"name":"itemExtras","sourcePath":"components/interactive/Accordion.jsx"},{"name":"renderRich","sourcePath":"components/content/RichText.jsx"}]} */
 
 (() => {
 
@@ -681,6 +681,7 @@ const BLOCKS = [
     bg: true
   },
   fields: ['org', 'program'],
+  rich: true,
   props: {
     org: 'SPU',
     program: 'Programa de Aprendizagem em Gestão de Imóveis Públicos'
@@ -799,16 +800,19 @@ const BLOCKS = [
   locks: {
     bg: true
   },
+  rich: true,
   fields: ['code', 'context'],
   itemsKey: 'credits',
   itemFields: [{
     key: 'role',
     label: 'Papel',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'name',
     label: 'Nome',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }],
   propFields: [{
     key: 'licenseKind',
@@ -973,7 +977,8 @@ const BLOCKS = [
   itemFields: [{
     key: 'title',
     label: 'Título',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'text',
     label: 'Texto',
@@ -1242,14 +1247,18 @@ const BLOCKS = [
   cat: 'Mídia',
   kind: 'list',
   itemsKey: 'markers',
+  rich: true,
+  fields: ['caption', 'credit', 'label'],
   itemFields: [{
     key: 'title',
     label: 'Título',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'description',
     label: 'Descrição',
-    type: 'rich'
+    type: 'rich',
+    inline: true
   }, {
     key: 'label',
     label: 'Rótulo do pino (opcional)',
@@ -1297,19 +1306,23 @@ const BLOCKS = [
   itemFields: [{
     key: 'value',
     label: 'Valor',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'unit',
     label: 'Unidade',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'label',
     label: 'Rótulo',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'description',
     label: 'Descrição',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }],
   propFields: [{
     key: 'variant',
@@ -1351,7 +1364,8 @@ const BLOCKS = [
   }, {
     key: 'title',
     label: 'Título',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'text',
     label: 'Texto',
@@ -1413,7 +1427,8 @@ const BLOCKS = [
   propFields: [{
     key: 'term',
     label: 'Conceito',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'definition',
     label: 'Definição',
@@ -1439,7 +1454,8 @@ const BLOCKS = [
   itemFields: [{
     key: 'title',
     label: 'Pergunta',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'content',
     label: 'Resposta',
@@ -1457,7 +1473,8 @@ const BLOCKS = [
   }, {
     key: 'linkLabel',
     label: 'Texto do link',
-    type: 'text',
+    type: 'rich',
+    inline: true,
     optional: true
   }, {
     key: 'linkButton',
@@ -1493,11 +1510,13 @@ const BLOCKS = [
   itemFields: [{
     key: 'label',
     label: 'Período',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'period',
     label: 'Intervalo',
-    type: 'text'
+    type: 'rich',
+    inline: true
   }, {
     key: 'color',
     label: 'Cor',
@@ -1509,11 +1528,13 @@ const BLOCKS = [
     itemFields: [{
       key: 'date',
       label: 'Data',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'title',
       label: 'Marco',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'content',
       label: 'Descrição',
@@ -1531,7 +1552,8 @@ const BLOCKS = [
     }, {
       key: 'linkLabel',
       label: 'Texto do link',
-      type: 'text',
+      type: 'rich',
+      inline: true,
       optional: true
     }, {
       key: 'linkButton',
@@ -1576,7 +1598,8 @@ const BLOCKS = [
     fields: [{
       key: 'label',
       label: 'Rótulo',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'icon',
       label: 'Ícone',
@@ -1584,7 +1607,8 @@ const BLOCKS = [
     }, {
       key: 'title',
       label: 'Título',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'content',
       label: 'Conteúdo',
@@ -1597,7 +1621,8 @@ const BLOCKS = [
     fields: [{
       key: 'label',
       label: 'Rótulo',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'icon',
       label: 'Ícone',
@@ -1605,7 +1630,8 @@ const BLOCKS = [
     }, {
       key: 'title',
       label: 'Título',
-      type: 'text'
+      type: 'rich',
+      inline: true
     }, {
       key: 'content',
       label: 'Conteúdo',
@@ -2707,40 +2733,6 @@ function LicenseBadge({
 Object.assign(__ds_scope, { LicenseBadge });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/LicenseBadge.jsx", error: String((e && e.message) || e) }); }
 
-// components/content/Masthead.jsx
-try { (() => {
-__ds_scope.injectCss('spu-masthead-css', `
-.spu-masthead{background:var(--petrol-800);color:var(--text-on-dark);position:relative;z-index:5}
-.spu-masthead__inner{max-width:var(--container-wide);margin:0 auto;padding:clamp(.8rem,1.8vw,1.05rem) var(--gutter);display:flex;align-items:baseline;gap:clamp(.55rem,1.6vw,1.1rem);flex-wrap:wrap}
-.spu-masthead__item{font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--ochre-300);font-weight:500;margin:0}
-.spu-masthead__org{white-space:nowrap}
-.spu-masthead__sep{color:rgba(246,239,227,.38)}
-@media (max-width:640px){.spu-masthead__sep{display:none}}
-`);
-function Masthead({
-  org = 'SPU',
-  program,
-  children,
-  className,
-  style
-}) {
-  return React.createElement('header', {
-    className: __ds_scope.cx('spu-masthead', className),
-    style
-  }, React.createElement('div', {
-    className: 'spu-masthead__inner'
-  }, org && React.createElement('span', {
-    className: 'spu-masthead__item spu-masthead__org'
-  }, org), org && program && React.createElement('span', {
-    className: 'spu-masthead__sep',
-    'aria-hidden': 'true'
-  }, '·'), program && React.createElement('span', {
-    className: 'spu-masthead__item'
-  }, program), children));
-}
-Object.assign(__ds_scope, { Masthead });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/Masthead.jsx", error: String((e && e.message) || e) }); }
-
 // components/content/MediaEmbed.jsx
 try { (() => {
 __ds_scope.injectCss('spu-embed-css', `
@@ -2912,56 +2904,6 @@ function MediaEmbed({
 }
 Object.assign(__ds_scope, { MediaEmbed });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/MediaEmbed.jsx", error: String((e && e.message) || e) }); }
-
-// components/content/PageFooter.jsx
-try { (() => {
-__ds_scope.injectCss('spu-pagefooter-css', `
-.spu-pagefooter{background:var(--petrol-800);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark);padding:var(--space-12) var(--gutter);margin-top:var(--space-12)}
-.spu-pagefooter__inner{max-width:var(--container-content);margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(1.5rem,5vw,4rem);align-items:start}
-.spu-pagefooter__code{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-on-dark);opacity:.8;margin:0 0 var(--space-4)}
-.spu-pagefooter__context{font-size:var(--fs-small);color:var(--text-on-dark-muted);max-width:46ch;margin:0;line-height:1.6}
-.spu-pagefooter__credits{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
-.spu-pagefooter__credits li{font-size:var(--fs-small);color:var(--text-on-dark-muted)}
-.spu-pagefooter__credits b{display:block;font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.08em;color:var(--text-on-dark);font-weight:600;opacity:.7}
-.spu-pagefooter__license{max-width:var(--container-content);margin:var(--space-8) auto 0}
-@media (max-width:640px){.spu-pagefooter__inner{grid-template-columns:1fr}}
-`);
-function PageFooter({
-  code,
-  context,
-  credits = [],
-  license = true,
-  licenseKind = 'byncsa',
-  licenseTone = 'dark',
-  children,
-  className,
-  style
-}) {
-  return React.createElement('footer', {
-    className: __ds_scope.cx('spu-pagefooter', className),
-    style
-  }, React.createElement('div', {
-    className: 'spu-pagefooter__inner'
-  }, React.createElement('div', null, code && React.createElement('p', {
-    className: 'spu-pagefooter__code'
-  }, code), context && React.createElement('p', {
-    className: 'spu-pagefooter__context'
-  }, context), license && React.createElement(__ds_scope.LicenseBadge, {
-    kind: licenseKind,
-    tone: licenseTone,
-    style: {
-      marginTop: 'var(--space-5)'
-    }
-  })), credits.length > 0 && React.createElement('ul', {
-    className: 'spu-pagefooter__credits'
-  }, credits.map((c, i) => React.createElement('li', {
-    key: i
-  }, React.createElement('b', null, c.role), c.name)))), children && React.createElement('div', {
-    className: 'spu-pagefooter__license'
-  }, children));
-}
-Object.assign(__ds_scope, { PageFooter });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/PageFooter.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/PageToc.jsx
 try { (() => {
@@ -3260,55 +3202,6 @@ function ResourceList({
 }
 Object.assign(__ds_scope, { ResourceList });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/ResourceList.jsx", error: String((e && e.message) || e) }); }
-
-// components/content/StatBlock.jsx
-try { (() => {
-__ds_scope.injectCss('spu-stat-css', `
-.spu-stats{display:grid;gap:var(--space-6)}
-.spu-stat{padding:var(--space-2) 0;min-width:0}
-.spu-stat--card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-6);box-shadow:var(--shadow-sm)}
-.spu-stat--rule{border-top:var(--border-accent) solid var(--_sc, var(--color-accent));padding-top:var(--space-4)}
-.spu-stat__value{font-family:var(--font-display);font-weight:800;font-size:clamp(1.9rem, 4.4vw, var(--fs-h1));line-height:.95;letter-spacing:var(--ls-display);color:var(--_sc, var(--color-primary-strong));overflow-wrap:break-word}
-.spu-stat__unit{font-size:.5em;font-weight:700;color:var(--_sc, var(--color-accent));margin-left:.12em}
-.spu-stat__label{font-family:var(--font-display);font-weight:700;font-size:var(--fs-h6);color:var(--text-strong);margin:.4em 0 .15em}
-.spu-stat__desc{color:var(--text-muted);font-size:var(--fs-small);margin:0}
-`);
-function StatBlock({
-  stats = [],
-  columns,
-  variant = 'rule',
-  className,
-  style
-}) {
-  // Responsivo: `columns` define o número desejado em telas largas, mas as
-  // colunas quebram automaticamente (auto-fit) quando não cabem; min() evita
-  // overflow em telas muito estreitas (cai para 1 coluna).
-  const minw = columns >= 4 ? 150 : columns === 3 ? 175 : columns === 2 ? 220 : 165;
-  const gridStyle = {
-    gridTemplateColumns: `repeat(auto-fit, minmax(min(${minw}px, 100%), 1fr))`,
-    ...style
-  };
-  return React.createElement('div', {
-    className: __ds_scope.cx('spu-stats', className),
-    style: gridStyle
-  }, stats.map((s, i) => React.createElement('div', {
-    key: i,
-    className: __ds_scope.cx('spu-stat', variant !== 'plain' && `spu-stat--${variant}`),
-    style: s.color ? {
-      '--_sc': s.color
-    } : undefined
-  }, React.createElement('div', {
-    className: 'spu-stat__value'
-  }, s.value, s.unit && React.createElement('span', {
-    className: 'spu-stat__unit'
-  }, s.unit)), s.label && React.createElement('div', {
-    className: 'spu-stat__label'
-  }, s.label), s.description && React.createElement('p', {
-    className: 'spu-stat__desc'
-  }, s.description))));
-}
-Object.assign(__ds_scope, { StatBlock });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/StatBlock.jsx", error: String((e && e.message) || e) }); }
 
 // components/core/Badge.jsx
 try { (() => {
@@ -4415,13 +4308,110 @@ function MarkerList({
       className: 'spu-mlist__body'
     }, obj.title && React.createElement('strong', {
       className: 'spu-mlist__title'
-    }, obj.title), __ds_scope.renderRich(obj.text, {
+    }, __ds_scope.renderRich(obj.title, {
+      inline: true
+    })), __ds_scope.renderRich(obj.text, {
       inline: true
     })));
   }));
 }
 Object.assign(__ds_scope, { MarkerList });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/MarkerList.jsx", error: String((e && e.message) || e) }); }
+
+// components/content/Masthead.jsx
+try { (() => {
+const isRichHtml = value => typeof value === 'string' && /[<&]/.test(value);
+function richInline(value) {
+  return isRichHtml(value) ? React.createElement(__ds_scope.RichText, {
+    html: value,
+    as: 'span',
+    className: 'spu-richtext--inline'
+  }) : value;
+}
+__ds_scope.injectCss('spu-masthead-css', `
+.spu-masthead{background:var(--petrol-800);color:var(--text-on-dark);position:relative;z-index:5}
+.spu-masthead__inner{max-width:var(--container-wide);margin:0 auto;padding:clamp(.8rem,1.8vw,1.05rem) var(--gutter);display:flex;align-items:baseline;gap:clamp(.55rem,1.6vw,1.1rem);flex-wrap:wrap}
+.spu-masthead__item{font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--ochre-300);font-weight:500;margin:0}
+.spu-masthead__org{white-space:nowrap}
+.spu-masthead__sep{color:rgba(246,239,227,.38)}
+@media (max-width:640px){.spu-masthead__sep{display:none}}
+`);
+function Masthead({
+  org = 'SPU',
+  program,
+  children,
+  className,
+  style
+}) {
+  return React.createElement('header', {
+    className: __ds_scope.cx('spu-masthead', className),
+    style
+  }, React.createElement('div', {
+    className: 'spu-masthead__inner'
+  }, org && React.createElement('span', {
+    className: 'spu-masthead__item spu-masthead__org'
+  }, richInline(org)), org && program && React.createElement('span', {
+    className: 'spu-masthead__sep',
+    'aria-hidden': 'true'
+  }, '·'), program && React.createElement('span', {
+    className: 'spu-masthead__item'
+  }, richInline(program)), children));
+}
+Object.assign(__ds_scope, { Masthead });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/Masthead.jsx", error: String((e && e.message) || e) }); }
+
+// components/content/PageFooter.jsx
+try { (() => {
+const richInline = value => __ds_scope.renderRich(value, {
+  inline: true
+});
+__ds_scope.injectCss('spu-pagefooter-css', `
+.spu-pagefooter{background:var(--petrol-800);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark);padding:var(--space-12) var(--gutter);margin-top:var(--space-12)}
+.spu-pagefooter__inner{max-width:var(--container-content);margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(1.5rem,5vw,4rem);align-items:start}
+.spu-pagefooter__code{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-on-dark);opacity:.8;margin:0 0 var(--space-4)}
+.spu-pagefooter__context{font-size:var(--fs-small);color:var(--text-on-dark-muted);max-width:46ch;margin:0;line-height:1.6}
+.spu-pagefooter__credits{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.spu-pagefooter__credits li{font-size:var(--fs-small);color:var(--text-on-dark-muted)}
+.spu-pagefooter__credits b{display:block;font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.08em;color:var(--text-on-dark);font-weight:600;opacity:.7}
+.spu-pagefooter__license{max-width:var(--container-content);margin:var(--space-8) auto 0}
+@media (max-width:640px){.spu-pagefooter__inner{grid-template-columns:1fr}}
+`);
+function PageFooter({
+  code,
+  context,
+  credits = [],
+  license = true,
+  licenseKind = 'byncsa',
+  licenseTone = 'dark',
+  children,
+  className,
+  style
+}) {
+  return React.createElement('footer', {
+    className: __ds_scope.cx('spu-pagefooter', className),
+    style
+  }, React.createElement('div', {
+    className: 'spu-pagefooter__inner'
+  }, React.createElement('div', null, code && React.createElement('p', {
+    className: 'spu-pagefooter__code'
+  }, richInline(code)), context && React.createElement('p', {
+    className: 'spu-pagefooter__context'
+  }, richInline(context)), license && React.createElement(__ds_scope.LicenseBadge, {
+    kind: licenseKind,
+    tone: licenseTone,
+    style: {
+      marginTop: 'var(--space-5)'
+    }
+  })), credits.length > 0 && React.createElement('ul', {
+    className: 'spu-pagefooter__credits'
+  }, credits.map((c, i) => React.createElement('li', {
+    key: i
+  }, React.createElement('b', null, richInline(c.role)), richInline(c.name))))), children && React.createElement('div', {
+    className: 'spu-pagefooter__license'
+  }, children));
+}
+Object.assign(__ds_scope, { PageFooter });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/PageFooter.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/Panel.jsx
 try { (() => {
@@ -4490,6 +4480,58 @@ function Panel({
 }
 Object.assign(__ds_scope, { Panel });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/Panel.jsx", error: String((e && e.message) || e) }); }
+
+// components/content/StatBlock.jsx
+try { (() => {
+const ri = v => __ds_scope.renderRich(v, {
+  inline: true
+});
+__ds_scope.injectCss('spu-stat-css', `
+.spu-stats{display:grid;gap:var(--space-6)}
+.spu-stat{padding:var(--space-2) 0;min-width:0}
+.spu-stat--card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-6);box-shadow:var(--shadow-sm)}
+.spu-stat--rule{border-top:var(--border-accent) solid var(--_sc, var(--color-accent));padding-top:var(--space-4)}
+.spu-stat__value{font-family:var(--font-display);font-weight:800;font-size:clamp(1.9rem, 4.4vw, var(--fs-h1));line-height:.95;letter-spacing:var(--ls-display);color:var(--_sc, var(--color-primary-strong));overflow-wrap:break-word}
+.spu-stat__unit{font-size:.5em;font-weight:700;color:var(--_sc, var(--color-accent));margin-left:.12em}
+.spu-stat__label{font-family:var(--font-display);font-weight:700;font-size:var(--fs-h6);color:var(--text-strong);margin:.4em 0 .15em}
+.spu-stat__desc{color:var(--text-muted);font-size:var(--fs-small);margin:0}
+`);
+function StatBlock({
+  stats = [],
+  columns,
+  variant = 'rule',
+  className,
+  style
+}) {
+  // Responsivo: `columns` define o número desejado em telas largas, mas as
+  // colunas quebram automaticamente (auto-fit) quando não cabem; min() evita
+  // overflow em telas muito estreitas (cai para 1 coluna).
+  const minw = columns >= 4 ? 150 : columns === 3 ? 175 : columns === 2 ? 220 : 165;
+  const gridStyle = {
+    gridTemplateColumns: `repeat(auto-fit, minmax(min(${minw}px, 100%), 1fr))`,
+    ...style
+  };
+  return React.createElement('div', {
+    className: __ds_scope.cx('spu-stats', className),
+    style: gridStyle
+  }, stats.map((s, i) => React.createElement('div', {
+    key: i,
+    className: __ds_scope.cx('spu-stat', variant !== 'plain' && `spu-stat--${variant}`),
+    style: s.color ? {
+      '--_sc': s.color
+    } : undefined
+  }, React.createElement('div', {
+    className: 'spu-stat__value'
+  }, ri(s.value), s.unit && React.createElement('span', {
+    className: 'spu-stat__unit'
+  }, ri(s.unit))), s.label && React.createElement('div', {
+    className: 'spu-stat__label'
+  }, ri(s.label)), s.description && React.createElement('p', {
+    className: 'spu-stat__desc'
+  }, ri(s.description)))));
+}
+Object.assign(__ds_scope, { StatBlock });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/StatBlock.jsx", error: String((e && e.message) || e) }); }
 
 // components/core/BlockView.jsx
 try { (() => {
@@ -4755,7 +4797,9 @@ function itemExtras(it, ns) {
       target: '_blank',
       rel: 'noopener',
       'data-btn': l.button ? l.button === true ? 'primary' : l.button : undefined
-    }, l.label || l.href))));
+    }, l.label != null ? __ds_scope.renderRich(l.label, {
+      inline: true
+    }) : l.href))));
   }
   return out;
 }
@@ -4834,11 +4878,15 @@ function Col(side, data) {
     size: 17
   }), React.createElement('p', {
     className: 'spu-ab__label'
-  }, data.label)), React.createElement('div', {
+  }, __ds_scope.renderRich(data.label, {
+    inline: true
+  }))), React.createElement('div', {
     className: 'spu-ab__bd'
   }, data.title && React.createElement('p', {
     className: 'spu-ab__title'
-  }, data.title), React.createElement('div', {
+  }, __ds_scope.renderRich(data.title, {
+    inline: true
+  })), React.createElement('div', {
     className: 'spu-ab__body'
   }, __ds_scope.renderRich(data.content))));
 }
@@ -5178,9 +5226,13 @@ function EraHead(era, accent) {
     className: 'spu-tl__head'
   }, React.createElement('h3', {
     className: 'spu-tl__title'
-  }, era.label), era.period && React.createElement('span', {
+  }, __ds_scope.renderRich(era.label, {
+    inline: true
+  })), era.period && React.createElement('span', {
     className: 'spu-tl__period'
-  }, era.period));
+  }, __ds_scope.renderRich(era.period, {
+    inline: true
+  })));
 }
 function Timeline({
   eras = [],
@@ -5212,9 +5264,13 @@ function Timeline({
       className: 'spu-tl__mbtn'
     }, React.createElement('span', null, React.createElement('span', {
       className: 'spu-tl__date'
-    }, m.date), React.createElement('p', {
+    }, __ds_scope.renderRich(m.date, {
+      inline: true
+    })), React.createElement('p', {
       className: 'spu-tl__mtitle'
-    }, m.title))), (m.content || m.image || m.imageSlot || m.link || m.links) && React.createElement('div', {
+    }, __ds_scope.renderRich(m.title, {
+      inline: true
+    })))), (m.content || m.image || m.imageSlot || m.link || m.links) && React.createElement('div', {
       className: 'spu-tl__content'
     }, __ds_scope.renderRich(m.content), __ds_scope.itemExtras(m, 'spu-tl'))))))));
   }
@@ -5244,15 +5300,23 @@ function Timeline({
     onClick: () => pickEra(i)
   }, React.createElement('span', {
     className: 'spu-tl__eralabel'
-  }, e.label), e.period && React.createElement('span', {
+  }, __ds_scope.renderRich(e.label, {
+    inline: true
+  })), e.period && React.createElement('span', {
     className: 'spu-tl__eraperiod'
-  }, e.period)))), React.createElement('div', {
+  }, __ds_scope.renderRich(e.period, {
+    inline: true
+  }))))), React.createElement('div', {
     className: 'spu-tl__head'
   }, React.createElement('h3', {
     className: 'spu-tl__title'
-  }, era.label), era.period && React.createElement('span', {
+  }, __ds_scope.renderRich(era.label, {
+    inline: true
+  })), era.period && React.createElement('span', {
     className: 'spu-tl__period'
-  }, era.period)), React.createElement('div', {
+  }, __ds_scope.renderRich(era.period, {
+    inline: true
+  }))), React.createElement('div', {
     className: 'spu-tl__rail'
   }, (era.milestones || []).map((m, i) => {
     const isOpen = openMs === i;
@@ -5269,9 +5333,13 @@ function Timeline({
       'aria-expanded': isOpen
     }, React.createElement('span', null, React.createElement('span', {
       className: 'spu-tl__date'
-    }, m.date), React.createElement('p', {
+    }, __ds_scope.renderRich(m.date, {
+      inline: true
+    })), React.createElement('p', {
       className: 'spu-tl__mtitle'
-    }, m.title)), hasBody && React.createElement('span', {
+    }, __ds_scope.renderRich(m.title, {
+      inline: true
+    }))), hasBody && React.createElement('span', {
       className: 'spu-tl__chev'
     }, React.createElement(__ds_scope.Icon, {
       name: 'chevron-down',
@@ -5923,6 +5991,12 @@ Object.assign(__ds_scope, { FullBleed });
 
 // components/content/Conclusion.jsx
 try { (() => {
+const isRichHtml = value => typeof value === 'string' && /[<&]/.test(value);
+function richBlock(value) {
+  return isRichHtml(value) ? React.createElement(__ds_scope.RichText, {
+    html: value
+  }) : value;
+}
 __ds_scope.injectCss('spu-conclusion-css', `
 .spu-conclusion .spu-fullbleed__content{max-width:62rem}
 .spu-conclusion .spu-fullbleed__body{max-width:none}
@@ -5969,7 +6043,7 @@ function Conclusion({
     style
   }, body && React.createElement('div', {
     className: 'spu-conclusion__body'
-  }, body), children && React.createElement('div', {
+  }, richBlock(body)), children && React.createElement('div', {
     className: 'spu-conclusion__extra'
   }, children)));
 }
@@ -6267,6 +6341,9 @@ Object.assign(__ds_scope, { ImageReveal });
 
 // components/media/MapFigure.jsx
 try { (() => {
+const ri = v => __ds_scope.renderRich(v, {
+  inline: true
+});
 __ds_scope.injectCss('spu-map-css', `
 .spu-map{margin:var(--flow-block) 0}
 .spu-map__stage{position:relative}
@@ -6353,26 +6430,26 @@ function MapFigure({
   }, React.createElement(__ds_scope.Icon, {
     name: 'map-pin',
     size: 15
-  }), m.title), m.description && React.createElement('p', {
+  }), ri(m.title)), m.description && React.createElement('p', {
     className: 'spu-map__popdesc'
-  }, m.description)), React.createElement('button', {
+  }, ri(m.description))), React.createElement('button', {
     type: 'button',
     className: __ds_scope.cx('spu-map__pin', active === i && 'spu-map__pin--active'),
     onClick: () => setActive(active === i ? null : i),
     'aria-label': m.title
   }, m.label != null ? m.label : i + 1))))), (caption || label || credit) && React.createElement('figcaption', {
     className: 'spu-map__cap'
-  }, label && React.createElement('b', null, label), caption, credit && React.createElement('span', {
+  }, label && React.createElement('b', null, ri(label)), ri(caption), credit && React.createElement('span', {
     style: {
       color: 'var(--text-faint)',
       display: 'block',
       marginTop: '.2em'
     }
-  }, 'Fonte: ', credit)), __ds_scope.isPrint() && markers.length > 0 && React.createElement('ol', {
+  }, 'Fonte: ', ri(credit))), __ds_scope.isPrint() && markers.length > 0 && React.createElement('ol', {
     className: 'spu-map__legend'
   }, markers.map((m, i) => React.createElement('li', {
     key: i
-  }, React.createElement('b', null, m.label != null ? m.label : i + 1), React.createElement('span', null, React.createElement('strong', null, m.title), m.description && React.createElement('span', null, ' — ', m.description))))));
+  }, React.createElement('b', null, m.label != null ? m.label : i + 1), React.createElement('span', null, React.createElement('strong', null, ri(m.title)), m.description && React.createElement('span', null, ' — ', ri(m.description)))))));
 }
 Object.assign(__ds_scope, { MapFigure });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/media/MapFigure.jsx", error: String((e && e.message) || e) }); }

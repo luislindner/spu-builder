@@ -206,14 +206,16 @@ export function redo(state: DocState): DocState {
 // newBlock('section') coloca os filhos-padrão em props.children, mas o BlockView
 // e o builder usam block.children. Normaliza: hoist props.children → block.children.
 function normalizeContainer(block: Block): Block {
-  const props = block.props || {};
-  if (block.children == null && Array.isArray(props.children)) {
-    block.children = props.children as Block[];
+  const props = { ...(block.props || {}) };
+  const normalized: Block = { ...block, props };
+
+  if (normalized.children == null && Array.isArray(props.children)) {
+    normalized.children = props.children as Block[];
   }
   if (props && 'children' in props) delete (props as Record<string, unknown>).children;
-  applyBuilderDefaults(block);
-  if (block.children) block.children.forEach(normalizeContainer);
-  return block;
+  applyBuilderDefaults(normalized);
+  if (normalized.children) normalized.children = normalized.children.map(normalizeContainer);
+  return normalized;
 }
 
 function applyBuilderDefaults(block: Block): Block {

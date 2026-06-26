@@ -112,7 +112,7 @@ export interface NS {
   BlockRegistry: BlockRegistryType;
   BuilderManifest: BuilderManifestType;
   BuilderExport: BuilderExportType;
-  Editable: React.ComponentType<{ html: string; onChange: (html: string) => void; single?: boolean; placeholder?: string }>;
+  Editable: React.ComponentType<{ html: string; onChange: (html: string) => void; single?: boolean; placeholder?: string; as?: React.ElementType }>;
   RichText: React.ComponentType<{ html: string; as?: React.ElementType; className?: string }>;
   MarkToolbar: React.ComponentType<Record<string, never>>;
   IconGallery: React.ComponentType<{ value?: string; onPick: (name: string) => void; filter?: string; itemMin?: number; size?: number }>;

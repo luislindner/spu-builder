@@ -2,7 +2,7 @@ import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { NS, Block, BlockDef } from '../../types/ds';
+import type { NS, Block, BlockDef, FieldDef } from '../../types/ds';
 import styles from './Canvas.module.css';
 
 export interface DropTarget {
@@ -76,7 +76,7 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
     >
       {handles()}
       <div style={{ position: 'relative' }}>
-        <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />
+        <EditableLeaf block={block} def={def} {...cb} />
         {isMap && isSelected && (
           <HotspotLayer block={block} onPatchMarkers={(markers) => cb.onInlineEdit(block, { markers })} />
         )}
@@ -146,12 +146,286 @@ function DropIndicator() {
   );
 }
 
+const BLOCK_LEVEL_FIELDS = new Set(['children', 'body', 'html', 'content']);
+const LEAF_BLOCKVIEW_TYPES = new Set(['titulo', 'prose']);
+const NON_EDITABLE_TEXT_KEYS = new Set([
+  'url',
+  'href',
+  'link',
+  'linkHref',
+  'src',
+  'slot',
+  'imageSlot',
+  'beforeSlot',
+  'afterSlot',
+  'color',
+  'icon',
+  'kickerIcon',
+  'provider',
+  'licenseKind',
+]);
+
+const FIELD_PLACEHOLDERS: Record<string, string> = {
+  title: 'Título',
+  heading: 'Subtítulo',
+  caption: 'Legenda',
+  credit: 'Crédito (opcional)',
+  byline: 'Autoria',
+  kicker: 'Sobrelinha',
+  cite: 'Fonte',
+  text: 'Texto',
+  children: 'Conteúdo',
+  body: 'Corpo',
+  html: 'Texto',
+  term: 'Termo',
+  definition: 'Definição',
+  org: 'Identidade',
+  program: 'Nome do programa',
+};
+
+function editableContainerProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
+  const fields = def.fields || [];
+  if (!fields.length) return block.props;
+
+  const props: Record<string, unknown> = { ...block.props };
+  fields.forEach((key) => {
+    const inline = !BLOCK_LEVEL_FIELDS.has(key);
+    props[key] = (
+      <cb.ns.Editable
+        key={key}
+        html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
+        single={inline}
+        as={inline ? 'span' : 'div'}
+        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
+      />
+    );
+  });
+
+  return props;
+}
+
+function replaceAtPath(value: unknown, path: Array<string | number>, nextValue: unknown): unknown {
+  if (path.length === 0) return nextValue;
+  const [head, ...rest] = path;
+
+  if (Array.isArray(value)) {
+    const copy = value.slice();
+    copy[Number(head)] = replaceAtPath(copy[Number(head)], rest, nextValue);
+    return copy;
+  }
+
+  if (value && typeof value === 'object') {
+    return {
+      ...(value as Record<string, unknown>),
+      [head]: replaceAtPath((value as Record<string, unknown>)[head as string], rest, nextValue),
+    };
+  }
+
+  if (typeof head === 'number') {
+    const copy: unknown[] = [];
+    copy[head] = replaceAtPath(undefined, rest, nextValue);
+    return copy;
+  }
+
+  return { [head]: replaceAtPath(undefined, rest, nextValue) };
+}
+
+function isEditableTextField(field: FieldDef) {
+  if (field.type !== 'rich' && field.type !== 'text') return false;
+  if (NON_EDITABLE_TEXT_KEYS.has(field.key)) return false;
+  if (/url|href|slot/i.test(field.key)) return false;
+  return true;
+}
+
+function editableTextValue(
+  value: unknown,
+  field: FieldDef,
+  block: Block,
+  cb: NodeCallbacks,
+  rootKey: string,
+  path: Array<string | number>,
+) {
+  const inline = field.inline ?? !BLOCK_LEVEL_FIELDS.has(field.key);
+  return (
+    <cb.ns.Editable
+      html={typeof value === 'string' ? value : ''}
+      single={inline}
+      as={inline ? 'span' : 'div'}
+      placeholder={field.label || FIELD_PLACEHOLDERS[field.key] || field.key || 'Texto'}
+      onChange={(html) => cb.onInlineEdit(block, { [rootKey]: replaceAtPath(block.props[rootKey], path, html) })}
+    />
+  );
+}
+
+function editableValueForField(
+  value: unknown,
+  field: FieldDef,
+  block: Block,
+  cb: NodeCallbacks,
+  rootKey: string,
+  path: Array<string | number>,
+): unknown {
+  if (isEditableTextField(field)) {
+    return editableTextValue(value, field, block, cb, rootKey, path);
+  }
+
+  if (field.type === 'object' && value && typeof value === 'object' && !Array.isArray(value)) {
+    return editableObjectValue(value as Record<string, unknown>, field.fields || [], block, cb, rootKey, path);
+  }
+
+  if (field.type === 'list' && Array.isArray(value)) {
+    return value.map((item, index) => editableItemValue(item, field.itemFields || [], block, cb, rootKey, [...path, index]));
+  }
+
+  return value;
+}
+
+function editableItemValue(
+  item: unknown,
+  fields: FieldDef[],
+  block: Block,
+  cb: NodeCallbacks,
+  rootKey: string,
+  path: Array<string | number>,
+): unknown {
+  if (fields.length === 1 && fields[0].key === '') {
+    return editableValueForField(item, fields[0], block, cb, rootKey, path);
+  }
+
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  return editableObjectValue(item as Record<string, unknown>, fields, block, cb, rootKey, path);
+}
+
+function editableObjectValue(
+  value: Record<string, unknown>,
+  fields: FieldDef[],
+  block: Block,
+  cb: NodeCallbacks,
+  rootKey: string,
+  path: Array<string | number>,
+) {
+  const next: Record<string, unknown> = { ...value };
+  fields.forEach((field) => {
+    if (!field.key) return;
+    next[field.key] = editableValueForField(value[field.key], field, block, cb, rootKey, [...path, field.key]);
+  });
+  return next;
+}
+
+function editableLeafProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
+  const props: Record<string, unknown> = { ...block.props };
+
+  (def.fields || []).forEach((key) => {
+    props[key] = (
+      <cb.ns.Editable
+        key={key}
+        html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
+        single={!BLOCK_LEVEL_FIELDS.has(key)}
+        as={BLOCK_LEVEL_FIELDS.has(key) ? 'div' : 'span'}
+        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
+      />
+    );
+  });
+
+  if (def.itemsKey && def.itemFields && Array.isArray(block.props[def.itemsKey])) {
+    props[def.itemsKey] = (block.props[def.itemsKey] as unknown[]).map((item, index) => (
+      editableItemValue(item, def.itemFields || [], block, cb, def.itemsKey as string, [index])
+    ));
+  }
+
+  (def.propFields || []).forEach((field) => {
+    if (!field.key || props[field.key] === undefined) return;
+    props[field.key] = editableValueForField(block.props[field.key], field, block, cb, field.key, []);
+  });
+
+  return props;
+}
+
+function EditableLeaf({ block, def, ...cb }: NodeCallbacks & { block: Block; def?: BlockDef }) {
+  const { ns } = cb;
+  if (!def || !def.component || LEAF_BLOCKVIEW_TYPES.has(block.type)) {
+    return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
+  }
+
+  if (block.type === 'figure') {
+    return <EditableFigure block={block} {...cb} />;
+  }
+
+  const Comp = ns[def.component] as React.ComponentType<Record<string, unknown>> | undefined;
+  if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
+
+  return React.createElement(Comp, editableLeafProps(block, def, cb));
+}
+
+function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
+  const { ns } = cb;
+  const props = block.props || {};
+  const sizeAliases: Record<string, string> = {
+    small: 'sm',
+    pequena: 'sm',
+    medium: 'md',
+    medio: 'md',
+    media: 'md',
+    large: 'lg',
+    wide: 'lg',
+    ampla: 'lg',
+    total: 'full',
+  };
+  const size = sizeAliases[String(props.size || 'md')] || String(props.size || 'md');
+  const slot = typeof props.slot === 'string' ? props.slot : '';
+  const src = typeof props.src === 'string' ? props.src : '';
+  const fit = typeof props.fit === 'string' ? props.fit : 'contain';
+  const hasMeta = props.title || props.caption || props.credit || props.label;
+
+  const field = (key: string, placeholder: string) => (
+    <ns.Editable
+      html={typeof props[key] === 'string' ? props[key] as string : ''}
+      single
+      as="span"
+      placeholder={placeholder}
+      onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
+    />
+  );
+
+  return (
+    <figure className={`spu-figure spu-figure--${size} ${hasMeta && slot ? 'spu-figure--framed' : ''}`}>
+      <div className="spu-figure__frame" style={{ cursor: 'default' }}>
+        {slot ? (
+          React.createElement('image-slot', {
+            id: slot,
+            shape: 'rect',
+            fit,
+            placeholder: 'Arraste uma imagem',
+            style: { width: '100%', height: 300, display: 'block' },
+          })
+        ) : src ? (
+          <img src={src} alt={typeof props.alt === 'string' ? props.alt : ''} />
+        ) : (
+          <div className="spu-ph">
+            <ns.Icon name="building" size={30} />
+            <span className="spu-ph__label">Imagem</span>
+          </div>
+        )}
+      </div>
+      <figcaption className="spu-figure__cap">
+        <span className="spu-figure__title">{field('title', 'Título')}</span>
+        {props.label ? <b>{field('label', 'Rótulo')}</b> : null}
+        {field('caption', 'Legenda')}
+        <span className="spu-figure__credit">{field('credit', 'Crédito (opcional)')}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
 function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; def: BlockDef }) {
   const { ns } = cb;
   const children: Block[] = (block.children as Block[]) || [];
   const childTypes: string[] = ns.BlockRegistry.childTypes;
   const isStack = (def as { stack?: boolean }).stack !== false;
   const Comp = ns[def.component as string] as React.ComponentType<Record<string, unknown>>;
+  const componentProps = editableContainerProps(block, def, cb);
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: `drop:${block.id}` });
 
@@ -182,11 +456,11 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
   // droppable. Grid (Columns): filhos vão direto como células; droppable no wrapper.
   const inner = isStack
     ? <div ref={dropRef} className={styles.stack + (isOver ? ` ${styles.dropOver}` : '')}>{nodes}</div>
-    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>{React.createElement(Comp, { ...block.props, children: undefined }, nodes)}</div>;
+    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>{React.createElement(Comp, { ...componentProps, children: undefined }, nodes)}</div>;
 
   // Para stack, o componente (Section) envolve o stack; para grid já está montado.
   return isStack
-    ? React.createElement(Comp, { ...block.props, children: undefined }, inner)
+    ? React.createElement(Comp, { ...componentProps, children: undefined }, inner)
     : inner;
 }
 
@@ -240,7 +514,13 @@ export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove,
         ))}
         {dropTarget?.parentId === null && dropTarget.index === blocks.length && <DropIndicator />}
       </SortableContext>
-      <ns.MarkToolbar />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <ns.MarkToolbar />
+      </div>
     </main>
   );
 }

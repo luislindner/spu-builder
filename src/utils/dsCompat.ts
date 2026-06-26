@@ -1,7 +1,42 @@
 import React from 'react';
-import type { NS } from '../types/ds';
+import type { FieldDef, NS } from '../types/ds';
 
 type Component = React.ComponentType<Record<string, unknown>>;
+const COMPAT_WRAPPED_TYPES = [
+  'pagefooter',
+  'markerlist',
+  'reflexao',
+  'mapfigure',
+  'statblock',
+  'feature',
+  'accordion',
+  'timeline',
+  'quiz',
+  'flashcard',
+  'compareab',
+] as const;
+
+const RICH_ITEM_FIELDS: Record<string, string[]> = {
+  pagefooter: ['role', 'name'],
+  markerlist: ['title', 'text'],
+  reflexao: [''],
+  mapfigure: ['title', 'description'],
+  statblock: ['value', 'unit', 'label', 'description'],
+  feature: ['title', 'text'],
+  accordion: ['title', 'content', 'linkLabel'],
+  timeline: ['label', 'period', 'date', 'title', 'content', 'linkLabel'],
+  quiz: ['question', 'text', 'feedback'],
+};
+
+const RICH_PROP_FIELDS: Record<string, string[]> = {
+  flashcard: ['term', 'definition'],
+  compareab: ['label', 'title', 'content'],
+};
+
+const RICH_DIRECT_FIELDS: Record<string, string[]> = {
+  pagefooter: ['code', 'context'],
+  mapfigure: ['caption', 'credit', 'label'],
+};
 
 function renderRichInline(ns: NS, value: unknown) {
   if (typeof value !== 'string') return value;
@@ -23,6 +58,25 @@ export function installDSCompat(ns: NS) {
   const registry = ns.BlockRegistry?.byType;
   if (registry?.masthead) registry.masthead.rich = true;
   if (registry?.conclusion) registry.conclusion.rich = true;
+  if (registry?.pagefooter) {
+    registry.pagefooter.rich = true;
+  }
+  if (registry?.mapfigure) {
+    registry.mapfigure.rich = true;
+    registry.mapfigure.fields = Array.from(new Set([...(registry.mapfigure.fields || []), 'caption', 'credit', 'label']));
+  }
+
+  Object.values(registry || {}).forEach((def) => {
+    const richItemKeys = RICH_ITEM_FIELDS[def.type] || [];
+    if (richItemKeys.length && def.itemFields) {
+      def.itemFields = markFieldsRich(def.itemFields, richItemKeys);
+    }
+
+    const richPropKeys = RICH_PROP_FIELDS[def.type] || [];
+    if (richPropKeys.length && def.propFields) {
+      def.propFields = markFieldsRich(def.propFields, richPropKeys);
+    }
+  });
 
   const Masthead = ns.Masthead as Component | undefined;
   if (Masthead) {
@@ -41,5 +95,87 @@ export function installDSCompat(ns: NS) {
     })) as Component;
   }
 
+  COMPAT_WRAPPED_TYPES.forEach((type) => wrapRichComponent(ns, type));
+
   target.__spuBuilderCompat = true;
+}
+
+function markFieldsRich(fields: FieldDef[], richKeys: string[]): FieldDef[] {
+  return fields.map((field) => {
+    const next = richKeys.includes(field.key)
+      ? { ...field, type: 'rich' as const, inline: field.inline ?? !['content', 'definition', 'feedback'].includes(field.key) }
+      : { ...field };
+
+    if (next.itemFields) next.itemFields = markFieldsRich(next.itemFields, richKeys);
+    if (next.fields) next.fields = markFieldsRich(next.fields, richKeys);
+    return next;
+  });
+}
+
+function wrapRichComponent(ns: NS, type: string) {
+  const def = ns.BlockRegistry?.byType?.[type];
+  if (!def?.component) return;
+  const Original = ns[def.component] as Component | undefined;
+  if (!Original) return;
+
+  ns[def.component] = ((props: Record<string, unknown>) => {
+    const next = richifyProps(ns, type, props);
+    return React.createElement(Original, next);
+  }) as Component;
+}
+
+function richifyProps(ns: NS, type: string, props: Record<string, unknown>) {
+  const def = ns.BlockRegistry?.byType?.[type];
+  const next: Record<string, unknown> = { ...props };
+
+  const directKeys = new Set([...(def?.fields || []), ...(RICH_DIRECT_FIELDS[type] || [])]);
+  directKeys.forEach((key) => {
+    if (next[key] !== undefined) {
+      next[key] = renderRichInline(ns, next[key]);
+    }
+  });
+
+  if (def?.itemsKey && def.itemFields && Array.isArray(next[def.itemsKey])) {
+    next[def.itemsKey] = (next[def.itemsKey] as unknown[]).map((item) => richifyItem(ns, item, def.itemFields || []));
+  }
+
+  (def?.propFields || []).forEach((field) => {
+    if (!field.key || next[field.key] === undefined) return;
+    next[field.key] = richifyValue(ns, next[field.key], field);
+  });
+
+  return next;
+}
+
+function richifyValue(ns: NS, value: unknown, field: FieldDef): unknown {
+  if ((field.type === 'rich' || field.type === 'text') && typeof value === 'string') {
+    return field.inline ?? !['content', 'definition', 'feedback'].includes(field.key)
+      ? renderRichInline(ns, value)
+      : renderRichBlock(ns, value);
+  }
+
+  if (field.type === 'object' && value && typeof value === 'object' && !Array.isArray(value)) {
+    return richifyObject(ns, value as Record<string, unknown>, field.fields || []);
+  }
+
+  if (field.type === 'list' && Array.isArray(value)) {
+    return value.map((item) => richifyItem(ns, item, field.itemFields || []));
+  }
+
+  return value;
+}
+
+function richifyItem(ns: NS, item: unknown, fields: FieldDef[]): unknown {
+  if (fields.length === 1 && fields[0].key === '') return richifyValue(ns, item, fields[0]);
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+  return richifyObject(ns, item as Record<string, unknown>, fields);
+}
+
+function richifyObject(ns: NS, value: Record<string, unknown>, fields: FieldDef[]) {
+  const next: Record<string, unknown> = { ...value };
+  fields.forEach((field) => {
+    if (!field.key) return;
+    next[field.key] = richifyValue(ns, value[field.key], field);
+  });
+  return next;
 }

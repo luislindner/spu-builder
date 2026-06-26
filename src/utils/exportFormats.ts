@@ -111,9 +111,51 @@ const DS_COMPAT_JS = `
 (function(){
   window.__SPU_INSTALL_DS_COMPAT = function(NS){
     if(!NS || NS.__spuBuilderCompat) return;
+    var COMPAT_TYPES = ['pagefooter','markerlist','reflexao','mapfigure','statblock','feature','accordion','timeline','quiz','flashcard','compareab'];
+    var RICH_ITEM_FIELDS = {
+      pagefooter:['role','name'],
+      markerlist:['title','text'],
+      reflexao:[''],
+      mapfigure:['title','description'],
+      statblock:['value','unit','label','description'],
+      feature:['title','text'],
+      accordion:['title','content','linkLabel'],
+      timeline:['label','period','date','title','content','linkLabel'],
+      quiz:['question','text','feedback']
+    };
+    var RICH_PROP_FIELDS = {
+      flashcard:['term','definition'],
+      compareab:['label','title','content']
+    };
+    var RICH_DIRECT_FIELDS = {
+      pagefooter:['code','context'],
+      mapfigure:['caption','credit','label']
+    };
+    function markFieldsRich(fields, richKeys){
+      return (fields || []).map(function(field){
+        var next = richKeys.indexOf(field.key) >= 0
+          ? Object.assign({}, field, { type: 'rich', inline: field.inline != null ? field.inline : ['content','definition','feedback'].indexOf(field.key) < 0 })
+          : Object.assign({}, field);
+        if(next.itemFields) next.itemFields = markFieldsRich(next.itemFields, richKeys);
+        if(next.fields) next.fields = markFieldsRich(next.fields, richKeys);
+        return next;
+      });
+    }
     if(NS.BlockRegistry && NS.BlockRegistry.byType){
       if(NS.BlockRegistry.byType.masthead) NS.BlockRegistry.byType.masthead.rich = true;
       if(NS.BlockRegistry.byType.conclusion) NS.BlockRegistry.byType.conclusion.rich = true;
+      if(NS.BlockRegistry.byType.pagefooter){
+        NS.BlockRegistry.byType.pagefooter.rich = true;
+      }
+      if(NS.BlockRegistry.byType.mapfigure){
+        NS.BlockRegistry.byType.mapfigure.rich = true;
+        NS.BlockRegistry.byType.mapfigure.fields = Array.from(new Set([].concat(NS.BlockRegistry.byType.mapfigure.fields || [], ['caption','credit','label'])));
+      }
+      Object.keys(NS.BlockRegistry.byType).forEach(function(type){
+        var def = NS.BlockRegistry.byType[type];
+        if(RICH_ITEM_FIELDS[type] && def.itemFields) def.itemFields = markFieldsRich(def.itemFields, RICH_ITEM_FIELDS[type]);
+        if(RICH_PROP_FIELDS[type] && def.propFields) def.propFields = markFieldsRich(def.propFields, RICH_PROP_FIELDS[type]);
+      });
     }
     function inline(value){
       if(typeof value !== 'string' || !/[<&]/.test(value) || !NS.RichText) return value;
@@ -142,6 +184,44 @@ const DS_COMPAT_JS = `
         }));
       };
     }
+    function richifyValue(value, field){
+      if((field.type === 'rich' || field.type === 'text') && typeof value === 'string'){
+        return field.inline != null ? (field.inline ? inline(value) : block(value)) : (['content','definition','feedback'].indexOf(field.key) >= 0 ? block(value) : inline(value));
+      }
+      if(field.type === 'object' && value && typeof value === 'object' && !Array.isArray(value)) return richifyObject(value, field.fields || []);
+      if(field.type === 'list' && Array.isArray(value)) return value.map(function(item){ return richifyItem(item, field.itemFields || []); });
+      return value;
+    }
+    function richifyItem(item, fields){
+      if(fields.length === 1 && fields[0].key === '') return richifyValue(item, fields[0]);
+      if(!item || typeof item !== 'object' || Array.isArray(item)) return item;
+      return richifyObject(item, fields);
+    }
+    function richifyObject(value, fields){
+      var next = Object.assign({}, value);
+      (fields || []).forEach(function(field){
+        if(!field.key) return;
+        next[field.key] = richifyValue(value[field.key], field);
+      });
+      return next;
+    }
+    function richifyProps(type, props){
+      var def = NS.BlockRegistry && NS.BlockRegistry.byType && NS.BlockRegistry.byType[type];
+      var next = Object.assign({}, props || {});
+      var direct = [].concat((def && def.fields) || [], RICH_DIRECT_FIELDS[type] || []);
+      direct.forEach(function(key){ if(next[key] !== undefined) next[key] = inline(next[key]); });
+      if(def && def.itemsKey && def.itemFields && Array.isArray(next[def.itemsKey])) next[def.itemsKey] = next[def.itemsKey].map(function(item){ return richifyItem(item, def.itemFields || []); });
+      ((def && def.propFields) || []).forEach(function(field){ if(field.key && next[field.key] !== undefined) next[field.key] = richifyValue(next[field.key], field); });
+      return next;
+    }
+    COMPAT_TYPES.forEach(function(type){
+      var def = NS.BlockRegistry && NS.BlockRegistry.byType && NS.BlockRegistry.byType[type];
+      var Original = def && def.component && NS[def.component];
+      if(!Original) return;
+      NS[def.component] = function(props){
+        return React.createElement(Original, richifyProps(type, props || {}));
+      };
+    });
     NS.__spuBuilderCompat = true;
   };
 })();`;
@@ -236,17 +316,39 @@ function buildPageHtml(o: PageOpts): string {
   const bundleTag = o.inline ? `<script>${escapeInlineScript(o.bundleJs)}</script>` : `<script src="assets/_ds_bundle.js"></script>`;
   const printFlag = o.print ? `<script>window.__SPU_PRINT=true;</script>` : '';
   const printCss = o.print ? `<style>
-@page { size: A4; margin: 16mm 14mm; }
+@page { size: A4; margin: 0; }
 html { background: #d8d5cd; }
 body { margin: 0; background: #d8d5cd; }
 #root {
   width: 210mm;
   min-height: 297mm;
   margin: 24px auto;
+  padding-block: 10mm;
+  box-sizing: border-box;
   background: var(--color-page, #fffdf8);
   box-shadow: 0 16px 40px rgba(0,0,0,.16);
 }
 .spu-print-shell { overflow: visible; }
+.spu-print-shell .spu-figure,
+.spu-print-shell .spu-map,
+.spu-print-shell .spu-bleedimg,
+.spu-print-shell .spu-reveal,
+.spu-print-shell .spu-reveal-print figure { break-inside: avoid; }
+.spu-print-shell .spu-figure__frame,
+.spu-print-shell .spu-map__frame,
+.spu-print-shell .spu-bleedimg__frame,
+.spu-print-shell .spu-reveal,
+.spu-print-shell .spu-reveal-print figure { max-height: 165mm !important; overflow: hidden; }
+.spu-print-shell .spu-figure__frame img,
+.spu-print-shell .spu-map__img,
+.spu-print-shell .spu-bleedimg__frame img,
+.spu-print-shell .spu-reveal img,
+.spu-print-shell .spu-reveal-print img,
+.spu-print-shell .spu-figure__frame > image-slot,
+.spu-print-shell .spu-map__frame image-slot,
+.spu-print-shell .spu-bleedimg__frame image-slot,
+.spu-print-shell .spu-reveal image-slot,
+.spu-print-shell .spu-reveal-print image-slot { max-height: 160mm !important; object-fit: contain !important; }
 .spu-print-answer-key {
   max-width: var(--container-content);
   margin: var(--space-8) auto 0;
@@ -272,7 +374,7 @@ body { margin: 0; background: #d8d5cd; }
 .spu-print-answer-key li { break-inside: avoid; margin: 0 0 .25em; }
 @media print {
   html, body, #root { background: transparent; }
-  #root { width: auto; min-height: 0; margin: 0; box-shadow: none; }
+  #root { width: auto; min-height: 0; margin: 0; padding-block: 10mm; box-shadow: none; }
 }
 </style>` : '';
 
