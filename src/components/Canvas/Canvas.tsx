@@ -23,7 +23,7 @@ interface NodeCallbacks {
 
 // Um nó da árvore: container (Section/Columns via componente real do DS) ou
 // folha (BlockView mode="edit"). Recursivo → containers podem aninhar.
-function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { block: Block; index: number; count: number; parentId: string | null }) {
+function BlockNode({ block, index, count, ...cb }: NodeCallbacks & { block: Block; index: number; count: number }) {
   const { ns, selectedId } = cb;
   const def: BlockDef | undefined = ns.BlockRegistry.byType[block.type];
   const isContainer = def?.kind === 'container';
@@ -426,6 +426,7 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
   const isStack = (def as { stack?: boolean }).stack !== false;
   const Comp = ns[def.component as string] as React.ComponentType<Record<string, unknown>>;
   const componentProps = editableContainerProps(block, def, cb);
+  const { children: _childrenProp, ...componentPropsWithoutChildren } = componentProps;
 
   const { setNodeRef: dropRef, isOver } = useDroppable({ id: `drop:${block.id}` });
 
@@ -445,7 +446,7 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
       {children.map((c, i) => (
         <React.Fragment key={c.id}>
           {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === i && <DropIndicator />}
-          <BlockNode block={c} index={i} count={children.length} parentId={block.id} {...cb} />
+          <BlockNode block={c} index={i} count={children.length} {...cb} />
         </React.Fragment>
       ))}
       {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === children.length && <DropIndicator />}
@@ -456,11 +457,11 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
   // droppable. Grid (Columns): filhos vão direto como células; droppable no wrapper.
   const inner = isStack
     ? <div ref={dropRef} className={styles.stack + (isOver ? ` ${styles.dropOver}` : '')}>{nodes}</div>
-    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>{React.createElement(Comp, { ...componentProps, children: undefined }, nodes)}</div>;
+    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>{React.createElement(Comp, componentPropsWithoutChildren, nodes)}</div>;
 
   // Para stack, o componente (Section) envolve o stack; para grid já está montado.
   return isStack
-    ? React.createElement(Comp, { ...componentProps, children: undefined }, inner)
+    ? React.createElement(Comp, componentPropsWithoutChildren, inner)
     : inner;
 }
 
@@ -500,7 +501,6 @@ export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove,
               block={block}
               index={i}
               count={blocks.length}
-              parentId={null}
               ns={ns}
               selectedId={selectedId}
               dropTarget={dropTarget}

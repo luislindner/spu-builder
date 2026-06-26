@@ -23,7 +23,7 @@ function isObj(v: unknown): v is Record<string, Json> {
 const MULTILINE = new Set(['content', 'children', 'body', 'html', 'feedback', 'description']);
 
 // Valor padrão para um campo, conforme o schema (mantém a estrutura correta).
-export function defaultForType(f: FieldDef): Json {
+function defaultForType(f: FieldDef): Json {
   switch (f.type) {
     case 'number': return 0;
     case 'bool': return false;
@@ -37,7 +37,7 @@ export function defaultForType(f: FieldDef): Json {
   }
 }
 
-export function blankItem(fields: FieldDef[]): Json {
+function blankItem(fields: FieldDef[]): Json {
   if (fields.length === 1 && fields[0].key === '') return defaultForType(fields[0]);
   const o: Record<string, Json> = {};
   for (const f of fields) o[f.key] = defaultForType(f);

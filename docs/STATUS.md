@@ -41,11 +41,11 @@ npm run build    # tsc + vite (verificação de tipos + bundle)
 - `src/store/docStore.ts` — reducer Immer + undo/redo (50 snapshots); ops de bloco e de filho; `assignSlots`/`reassignSlots` (ids de imagem estáveis).
 - `src/types/ds.d.ts` — contrato de tipos do DS (BlockDef, FieldDef, NS, etc.).
 - `src/components/`
-  - `Toolbar/` — título, undo/redo, **Abrir** (.spu.json), **Salvar**, **Exportar HTML** (offline inline).
+  - `Toolbar/` — título, undo/redo, **Abrir** (.spu.json/HTML), **Salvar**, visualizações e exportações HTML/pacote/SCORM.
   - `Library/` — biblioteca por categoria; drag (dnd-kit) + clique para inserir.
-  - `Canvas/` + `SectionBlock.tsx` — render via `ns.BlockView mode="edit"` (edição inline); Section usa o componente real `ns.Section`; handles sobrepostos; drop em seção com validação `childTypes`.
+  - `Canvas/` — render recursivo via `BlockNode`; containers usam componentes reais do DS; folhas editam inline; handles sobrepostos; drop em seção/container com validação `childTypes`.
   - `Inspector/` + `ListEditor.tsx` + `labels.ts` — painel dirigido por `kind`/`itemFields`/`propFields`.
-- `src/utils/exportKit.ts` — monta kit inline (bundle + CSS com @imports resolvidos + image-slot + sidecar de imagens) para export standalone offline.
+- `src/utils/exportFormats.ts` — exporta HTML autocontido, pacote HTML + assets e SCORM 1.2.
 - `docs/DS-PATCH.md` — patches do DS já aplicados (itemFields + mode="edit").
 
 ## ✅ Feito nesta sessão

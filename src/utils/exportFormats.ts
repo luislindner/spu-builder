@@ -462,7 +462,7 @@ function download(filename: string, content: Uint8Array | string, mime: string) 
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
 }
 
-const safe = (s: string) => (s || 'conteudo').replace(/[^\w\-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'conteudo';
+const safe = (s: string) => (s || 'conteudo').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'conteudo';
 
 // ── 1) HTML autocontido ─────────────────────────────────────────────────────
 export async function exportSelfContained(doc: Doc) {
