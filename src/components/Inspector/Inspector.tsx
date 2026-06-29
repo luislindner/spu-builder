@@ -47,12 +47,13 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const props = block.props || {};
   const patch = (p: Record<string, unknown>) => onPatch(block.id, p);
+  const labelFor = (key: string) => (block.type === 'mapfigure' && key === 'label' ? 'Título da imagem' : lbl(key));
 
   // ---- controles reutilizáveis ----
 
   const selectField = (key: string, options: string[], allowEmpty = false, onValue?: (value: string) => Record<string, unknown>) => (
     <div className={styles.field} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       <select
         className={styles.select}
         value={(props[key] as string) ?? ''}
@@ -66,7 +67,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const accentField = (key: string) => (
     <div className={styles.field} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       <select
         className={styles.select}
         value={(props[key] as string) ?? ''}
@@ -82,7 +83,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const iconField = (key: string) => (
     <div className={styles.field} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       <div className={styles.iconGallery}>
         <IconGallery
           value={(props[key] as string) || ''}
@@ -96,7 +97,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const textField = (key: string, rich: boolean) => (
     <div className={styles.field} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       {rich ? (
         <Editable
           html={(props[key] as string) || ''}
@@ -116,7 +117,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const numberField = (key: string) => (
     <div className={styles.field} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       <input
         type="number"
         className={styles.input}
@@ -128,7 +129,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const boolField = (key: string) => (
     <div className={`${styles.field} ${styles.fieldRow}`} key={key}>
-      <label className={styles.label}>{lbl(key)}</label>
+      <label className={styles.label}>{labelFor(key)}</label>
       <input
         type="checkbox"
         checked={!!props[key]}
@@ -159,7 +160,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
   const schemaField = (f: FieldDef) => {
     return (
       <div className={styles.field} key={f.key}>
-        <label className={styles.label}>{f.label || lbl(f.key)}</label>
+        <label className={styles.label}>{f.label || labelFor(f.key)}</label>
         <FieldControl ns={ns} field={f} value={(props[f.key] as never) ?? null} onChange={(v) => patch({ [f.key]: v })} />
       </div>
     );
@@ -236,7 +237,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
         if (isSlotKey(k)) {
           return (
             <div className={styles.field} key={k}>
-              <label className={styles.label}>{k === 'slot' ? 'Imagem' : lbl(k)}</label>
+              <label className={styles.label}>{k === 'slot' ? 'Imagem' : labelFor(k)}</label>
               <SlotField slotId={(v as string) || ''} />
             </div>
           );
@@ -248,7 +249,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
           // Array sem schema → infere campo escalar rich.
           return (
             <div className={styles.field} key={k}>
-              <label className={styles.label}>{lbl(k)}</label>
+              <label className={styles.label}>{labelFor(k)}</label>
               <ListEditor
                 ns={ns}
                 fields={[{ key: '', label: lbl(k), type: 'rich', inline: true }]}

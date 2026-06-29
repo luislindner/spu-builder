@@ -35,7 +35,7 @@ const RICH_PROP_FIELDS: Record<string, string[]> = {
 
 const RICH_DIRECT_FIELDS: Record<string, string[]> = {
   pagefooter: ['code', 'context'],
-  mapfigure: ['caption', 'credit', 'label'],
+  mapfigure: ['caption', 'credit', 'label', 'title'],
 };
 
 function renderRichInline(ns: NS, value: unknown) {
@@ -56,6 +56,7 @@ export function installDSCompat(ns: NS) {
   if (!target || target.__spuBuilderCompat) return;
 
   const registry = ns.BlockRegistry?.byType;
+  if (registry?.hero) registry.hero.rich = true;
   if (registry?.masthead) registry.masthead.rich = true;
   if (registry?.conclusion) registry.conclusion.rich = true;
   if (registry?.pagefooter) {

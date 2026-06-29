@@ -129,7 +129,7 @@ const DS_COMPAT_JS = `
     };
     var RICH_DIRECT_FIELDS = {
       pagefooter:['code','context'],
-      mapfigure:['caption','credit','label']
+      mapfigure:['caption','credit','label','title']
     };
     function markFieldsRich(fields, richKeys){
       return (fields || []).map(function(field){
