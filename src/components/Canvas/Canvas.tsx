@@ -377,6 +377,7 @@ function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
   const slot = typeof props.slot === 'string' ? props.slot : '';
   const src = typeof props.src === 'string' ? props.src : '';
   const fit = typeof props.fit === 'string' ? props.fit : 'contain';
+  const imageTitleKey = Object.prototype.hasOwnProperty.call(props, 'title') ? 'title' : 'label';
   const hasMeta = props.title || props.caption || props.credit || props.label;
 
   const field = (key: string, placeholder: string) => (
@@ -410,8 +411,7 @@ function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
         )}
       </div>
       <figcaption className="spu-figure__cap">
-        <span className="spu-figure__title">{field('title', 'Título')}</span>
-        {props.label ? <b>{field('label', 'Rótulo')}</b> : null}
+        <span className="spu-figure__title">{field(imageTitleKey, 'Título da imagem')}</span>
         {field('caption', 'Legenda')}
         <span className="spu-figure__credit">{field('credit', 'Crédito (opcional)')}</span>
       </figcaption>

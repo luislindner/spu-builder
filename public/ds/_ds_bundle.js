@@ -5542,7 +5542,7 @@ __ds_scope.injectCss('spu-bleedimg-css', `
 .spu-bleedimg figcaption .spu-bleedimg__cap{display:block;text-align:center}
 .spu-bleedimg figcaption .spu-bleedimg__title,
 .spu-bleedimg figcaption .spu-bleedimg__credit{text-align:center}
-.spu-bleedimg__title{display:block;font-family:var(--font-display);font-weight:700;color:var(--color-primary-strong);margin-bottom:.2em}
+.spu-bleedimg__title{display:block;font:inherit;font-weight:700;color:inherit;margin-bottom:.2em}
 .spu-bleedimg__credit{display:block;color:var(--text-faint);margin-top:.2em}
 .spu-bleedimg__overlay{position:absolute;left:50%;bottom:var(--space-5);transform:translateX(-50%);width:min(var(--container-content),calc(100% - var(--gutter)*2));padding:var(--space-4) var(--space-5);border-radius:var(--radius-md);backdrop-filter:blur(8px);box-shadow:var(--shadow-md)}
 .spu-bleedimg__overlay .spu-bleedimg__cap{margin:0;padding:0;color:inherit;text-align:left}
@@ -5733,8 +5733,8 @@ __ds_scope.injectCss('spu-figure-css', `
 .spu-figure__cap{font-size:var(--fs-caption);color:var(--text-muted);margin-top:var(--space-3);line-height:1.55}
 .spu-figure--framed .spu-figure__cap{margin-top:0;padding:var(--space-3) var(--space-4);background:var(--color-surface);border:1px solid var(--color-border);border-top:none;border-radius:0 0 var(--radius-md) var(--radius-md)}
 .spu-figure--framed .spu-figure__frame{border-radius:var(--radius-md) var(--radius-md) 0 0;box-shadow:var(--shadow-sm)}
-.spu-figure__cap b{font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.06em;color:var(--color-primary-strong);font-weight:600;margin-right:.5em}
-.spu-figure__title{display:block;font-family:var(--font-display);font-weight:700;font-size:calc(var(--fs-caption) + .1rem);color:var(--color-primary-strong);letter-spacing:var(--ls-display);margin-bottom:.3em}
+.spu-figure__cap b,.spu-figure__cap strong{font:inherit;font-weight:700;text-transform:none;letter-spacing:0;color:inherit}
+.spu-figure__title{display:block;font:inherit;font-weight:700;text-transform:none;letter-spacing:0;color:inherit;margin-bottom:.3em}
 .spu-figure__credit{display:block;color:var(--text-faint);font-size:var(--fs-caption);margin-top:.25em}
 .spu-lightbox{position:fixed;inset:0;z-index:1000;background:rgba(14,46,43,.93);display:flex;align-items:center;justify-content:center;padding:clamp(1rem,5vw,4rem);cursor:zoom-out;animation:spu-fade var(--dur) var(--ease-out)}
 .spu-lightbox img{max-width:100%;max-height:100%;border-radius:var(--radius);box-shadow:var(--shadow-lg)}
@@ -5836,7 +5836,8 @@ function Figure({
     }, 'Imagem'));
   }
   const canZoom = zoom && (slot ? zoomSrc : src);
-  const framed = !!(slot && (title || caption || credit));
+  const imageTitle = title || label;
+  const framed = !!(slot && (imageTitle || caption || credit));
   return React.createElement('figure', {
     className: __ds_scope.cx('spu-figure', `spu-figure--${resolvedSize}`, framed && 'spu-figure--framed', className),
     style
@@ -5853,13 +5854,13 @@ function Figure({
   }, React.createElement(__ds_scope.Icon, {
     name: 'maximize',
     size: 18
-  }))), (caption || label || credit || title) && React.createElement('figcaption', {
+  }))), (caption || imageTitle || credit) && React.createElement('figcaption', {
     className: 'spu-figure__cap'
-  }, title && React.createElement('span', {
+  }, imageTitle && React.createElement('span', {
     className: 'spu-figure__title'
-  }, __ds_scope.renderRich(title, {
+  }, __ds_scope.renderRich(imageTitle, {
     inline: true
-  })), label && React.createElement('b', null, label), __ds_scope.renderRich(caption, {
+  })), __ds_scope.renderRich(caption, {
     inline: true
   }), credit && React.createElement('span', {
     className: 'spu-figure__credit'
@@ -6063,7 +6064,11 @@ __ds_scope.injectCss('spu-hero-css', `
 .spu-hero__kicker{display:inline-flex;align-items:center;gap:.5em;font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:var(--ls-eyebrow);color:var(--ochre-300);font-weight:500}
 .spu-hero__kicker svg{color:var(--ochre-300)}
 .spu-hero__h1{font-family:var(--font-display);font-weight:800;font-size:clamp(1.85rem,4.2vw,var(--fs-h1));line-height:1.08;letter-spacing:var(--ls-display);color:#fff;margin:.5em 0 0;text-wrap:balance}
+.spu-hero__h1 .spu-richtext{line-height:inherit;color:inherit}
+.spu-hero__h1 .spu-richtext strong,.spu-hero__h1 .spu-richtext b{color:inherit}
 .spu-hero__byline{align-self:flex-start;width:fit-content;max-width:100%;margin-top:clamp(.9rem,1.8vw,1.4rem);background:var(--ochre-800);color:#F6EFE3;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.04em;padding:.85em 1.4em;border-radius:var(--radius);box-shadow:var(--shadow-md)}
+.spu-hero__kicker .spu-richtext,.spu-hero__byline .spu-richtext{color:inherit;line-height:inherit}
+.spu-hero__kicker .spu-richtext strong,.spu-hero__kicker .spu-richtext b,.spu-hero__byline .spu-richtext strong,.spu-hero__byline .spu-richtext b{color:inherit}
 @media (max-width:720px){
   .spu-hero{display:block;min-height:0 !important}
   .spu-hero__bg{position:relative;inset:auto;height:40vh;min-height:220px}
@@ -6138,6 +6143,15 @@ function Hero({
       alt
     });
   }
+  const kickerNode = __ds_scope.renderRich(kicker, {
+    inline: true
+  });
+  const titleNode = __ds_scope.renderRich(title, {
+    inline: true
+  });
+  const bylineNode = __ds_scope.renderRich(byline, {
+    inline: true
+  });
   return React.createElement('div', {
     id,
     ref: rootRef,
@@ -6163,11 +6177,11 @@ function Hero({
   }, kickerIcon && React.createElement(__ds_scope.Icon, {
     name: kickerIcon,
     size: 16
-  }), kicker), title && React.createElement('h1', {
+  }), kickerNode), title && React.createElement('h1', {
     className: 'spu-hero__h1'
-  }, title)), byline && React.createElement('div', {
+  }, titleNode)), byline && React.createElement('div', {
     className: 'spu-hero__byline'
-  }, byline))));
+  }, bylineNode))));
 }
 Object.assign(__ds_scope, { Hero });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/media/Hero.jsx", error: String((e && e.message) || e) }); }
@@ -6362,7 +6376,8 @@ __ds_scope.injectCss('spu-map-css', `
 .spu-map__poptitle svg{color:var(--color-accent)}
 .spu-map__popdesc{font-size:var(--fs-caption);color:var(--text-muted);margin:0;line-height:1.5}
 .spu-map__cap{font-size:var(--fs-caption);color:var(--text-muted);margin-top:var(--space-3);line-height:1.5}
-.spu-map__cap b{font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.06em;color:var(--color-primary-strong);font-weight:600;margin-right:.5em}
+.spu-map__cap b,.spu-map__cap strong{font:inherit;font-weight:700;text-transform:none;letter-spacing:0;color:inherit}
+.spu-map__title{display:block;font:inherit;font-weight:700;text-transform:none;letter-spacing:0;color:inherit;margin-bottom:.3em}
 .spu-map__legend{list-style:none;margin:var(--space-4) 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--space-3)}
 .spu-map__legend li{display:flex;gap:.6em;font-size:var(--fs-caption);color:var(--text-body);line-height:1.45}
 .spu-map__legend b{flex:0 0 auto;width:1.5em;height:1.5em;border-radius:var(--radius-pill);background:var(--color-accent);color:#fff;font-family:var(--font-mono);font-size:.72rem;font-weight:600;display:flex;align-items:center;justify-content:center}
@@ -6375,11 +6390,13 @@ function MapFigure({
   markers = [],
   caption,
   credit,
+  title,
   label,
   className,
   style
 }) {
   const [active, setActive] = React.useState(null);
+  const imageTitle = title || label;
   const media = slot ? React.createElement('image-slot', {
     id: slot,
     shape: 'rect',
@@ -6437,9 +6454,11 @@ function MapFigure({
     className: __ds_scope.cx('spu-map__pin', active === i && 'spu-map__pin--active'),
     onClick: () => setActive(active === i ? null : i),
     'aria-label': m.title
-  }, m.label != null ? m.label : i + 1))))), (caption || label || credit) && React.createElement('figcaption', {
+  }, m.label != null ? m.label : i + 1))))), (caption || imageTitle || credit) && React.createElement('figcaption', {
     className: 'spu-map__cap'
-  }, label && React.createElement('b', null, ri(label)), ri(caption), credit && React.createElement('span', {
+  }, imageTitle && React.createElement('span', {
+    className: 'spu-map__title'
+  }, ri(imageTitle)), ri(caption), credit && React.createElement('span', {
     style: {
       color: 'var(--text-faint)',
       display: 'block',
