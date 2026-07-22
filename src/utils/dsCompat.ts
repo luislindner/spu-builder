@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FieldDef, NS } from '../types/ds';
+import { normalizeEditorWhitespace } from './projectCompat';
 
 type Component = React.ComponentType<Record<string, unknown>>;
 const COMPAT_WRAPPED_TYPES = [
@@ -15,6 +16,7 @@ const COMPAT_WRAPPED_TYPES = [
   'flashcard',
   'compareab',
   'carousel',
+  'contentslider',
 ] as const;
 
 const RICH_ITEM_FIELDS: Record<string, string[]> = {
@@ -28,6 +30,7 @@ const RICH_ITEM_FIELDS: Record<string, string[]> = {
   timeline: ['label', 'period', 'date', 'title', 'content', 'linkLabel'],
   quiz: ['question', 'text', 'feedback'],
   carousel: ['title', 'caption', 'credit'],
+  contentslider: ['label', 'title', 'subtitle', 'description', 'linkLabel', 'caption'],
 };
 
 const RICH_PROP_FIELDS: Record<string, string[]> = {
@@ -42,15 +45,17 @@ const RICH_DIRECT_FIELDS: Record<string, string[]> = {
 
 function renderRichInline(ns: NS, value: unknown) {
   if (typeof value !== 'string') return value;
-  if (!/[<&]/.test(value)) return value;
+  const normalized = normalizeEditorWhitespace(value);
+  if (!/[<&]/.test(normalized)) return normalized;
   const RichText = ns.RichText as React.ComponentType<Record<string, unknown>>;
-  return React.createElement(RichText, { html: value, as: 'span', className: 'spu-richtext--inline' });
+  return React.createElement(RichText, { html: normalized, as: 'span', className: 'spu-richtext--inline' });
 }
 
 function renderRichBlock(ns: NS, value: unknown) {
   if (typeof value !== 'string') return value;
-  if (!/[<&]/.test(value)) return value;
-  return React.createElement(ns.RichText, { html: value });
+  const normalized = normalizeEditorWhitespace(value);
+  if (!/[<&]/.test(normalized)) return normalized;
+  return React.createElement(ns.RichText, { html: normalized });
 }
 
 export function installDSCompat(ns: NS) {
@@ -67,6 +72,19 @@ export function installDSCompat(ns: NS) {
   if (registry?.mapfigure) {
     registry.mapfigure.rich = true;
     registry.mapfigure.fields = Array.from(new Set([...(registry.mapfigure.fields || []), 'caption', 'credit', 'label']));
+  }
+
+  const Editable = ns.Editable as Component | undefined;
+  if (Editable) {
+    const SanitizedEditable = (props: Record<string, unknown>) => {
+      const onChange = props.onChange as ((value: string) => void) | undefined;
+      return React.createElement(Editable, {
+        ...props,
+        html: typeof props.html === 'string' ? normalizeEditorWhitespace(props.html) : props.html,
+        onChange: onChange ? (value: string) => onChange(normalizeEditorWhitespace(value)) : undefined,
+      });
+    };
+    ns.Editable = SanitizedEditable as unknown as typeof ns.Editable;
   }
 
   Object.values(registry || {}).forEach((def) => {
@@ -99,6 +117,32 @@ export function installDSCompat(ns: NS) {
   }
 
   COMPAT_WRAPPED_TYPES.forEach((type) => wrapRichComponent(ns, type));
+
+  const Accordion = ns.Accordion as Component | undefined;
+  if (Accordion) {
+    ns.Accordion = ((props: Record<string, unknown>) => {
+      const items = Array.isArray(props.items) ? props.items.map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return item;
+        const value = item as Record<string, unknown>;
+        const blocks = Array.isArray(value.blocks) ? value.blocks : [];
+        if (!blocks.length) return value;
+        return {
+          ...value,
+          content: React.createElement(React.Fragment, null,
+            renderRichBlock(ns, value.content) as React.ReactNode,
+            React.createElement('div', { className: 'spu-accordion-blocks' },
+              blocks.map((block, index) => React.createElement(ns.BlockView, {
+                key: (block as { id?: string }).id || index,
+                block: block as never,
+                mode: 'preview',
+              })),
+            ),
+          ),
+        };
+      }) : props.items;
+      return React.createElement(Accordion, { ...props, items });
+    }) as Component;
+  }
 
   target.__spuBuilderCompat = true;
 }

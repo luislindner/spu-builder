@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { NS, Block, BlockDef, FieldDef } from '../../types/ds';
+import { prepareBlock } from '../../store/docStore';
 import styles from './Canvas.module.css';
 import { InsertBlockButton } from './InsertBlockButton';
 
@@ -370,10 +371,76 @@ function EditableLeaf({ block, def, ...cb }: NodeCallbacks & { block: Block; def
     return <EditableFigure block={block} {...cb} />;
   }
 
+  if (block.type === 'accordion') {
+    return <EditableAccordion block={block} def={def} {...cb} />;
+  }
+
   const Comp = ns[def.component] as React.ComponentType<Record<string, unknown>> | undefined;
   if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
 
   return React.createElement(Comp, editableLeafProps(block, def, cb));
+}
+
+function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block; def: BlockDef }) {
+  const { ns } = cb;
+  const Comp = ns[def.component as string] as React.ComponentType<Record<string, unknown>> | undefined;
+  if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
+
+  const sourceItems = Array.isArray(block.props.items) ? block.props.items : [];
+  const allowedTypes = ns.BlockRegistry.childTypes.filter((type) => type !== 'accordion');
+  const updateBlocks = (itemIndex: number, blocks: Block[]) => {
+    cb.onInlineEdit(block, { items: replaceAtPath(sourceItems, [itemIndex, 'blocks'], blocks) });
+  };
+
+  const items = sourceItems.map((source, itemIndex) => {
+    const editable = editableItemValue(source, def.itemFields || [], block, cb, 'items', [itemIndex]);
+    if (!source || typeof source !== 'object' || Array.isArray(source) || !editable || typeof editable !== 'object' || Array.isArray(editable)) {
+      return editable;
+    }
+
+    const sourceObject = source as Record<string, unknown>;
+    const editableObject = editable as Record<string, unknown>;
+    const blocks = Array.isArray(sourceObject.blocks) ? sourceObject.blocks as Block[] : [];
+    const nestedEditor = (
+      <div className={styles.accordionBlocks} onClick={(event) => event.stopPropagation()}>
+        {blocks.map((nested, nestedIndex) => (
+          <div className={styles.accordionBlock} key={nested.id}>
+            <div className={styles.accordionBlockActions}>
+              <button onClick={() => updateBlocks(itemIndex, blocks.filter((_, index) => index !== nestedIndex))} title="Remover bloco">✕</button>
+            </div>
+            <ns.BlockView
+              block={nested}
+              mode="edit"
+              onEdit={(edited, patch) => updateBlocks(itemIndex, blocks.map((candidate) => (
+                candidate.id === edited.id ? { ...candidate, props: { ...candidate.props, ...patch } } : candidate
+              )))}
+            />
+          </div>
+        ))}
+        <InsertBlockButton
+          ns={ns}
+          allowedTypes={allowedTypes}
+          onInsert={(type) => {
+            const nested = ns.BlockRegistry.newBlock(type);
+            if (nested) updateBlocks(itemIndex, [...blocks, prepareBlock(nested)]);
+          }}
+        />
+      </div>
+    );
+
+    return {
+      ...editableObject,
+      blocks: undefined,
+      content: (
+        <>
+          {editableObject.content}
+          {nestedEditor}
+        </>
+      ),
+    };
+  });
+
+  return React.createElement(Comp, { ...block.props, items });
 }
 
 function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {

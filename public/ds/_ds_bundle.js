@@ -1266,6 +1266,105 @@ const BLOCKS = [
     }]
   }
 }, {
+  type: 'contentslider',
+  component: 'ContentSlider',
+  label: 'Slider de conteúdo',
+  icon: 'panels-top-left',
+  cat: 'Interativos',
+  kind: 'list',
+  itemsKey: 'slides',
+  itemFields: [{
+    key: 'showImage',
+    label: 'Exibir imagem',
+    type: 'bool'
+  }, {
+    key: 'slot',
+    label: 'Imagem (opcional)',
+    type: 'slot',
+    optional: true
+  }, {
+    key: 'alt',
+    label: 'Texto alternativo',
+    type: 'text',
+    optional: true
+  }, {
+    key: 'caption',
+    label: 'Legenda da imagem',
+    type: 'rich',
+    inline: true,
+    optional: true
+  }, {
+    key: 'label',
+    label: 'Etiqueta',
+    type: 'rich',
+    inline: true,
+    optional: true
+  }, {
+    key: 'title',
+    label: 'Título',
+    type: 'rich',
+    inline: true
+  }, {
+    key: 'subtitle',
+    label: 'Subtítulo',
+    type: 'rich',
+    inline: true,
+    optional: true
+  }, {
+    key: 'description',
+    label: 'Descrição',
+    type: 'rich',
+    optional: true
+  }, {
+    key: 'linkHref',
+    label: 'URL do link',
+    type: 'text',
+    optional: true
+  }, {
+    key: 'linkLabel',
+    label: 'Texto do link',
+    type: 'rich',
+    inline: true,
+    optional: true
+  }],
+  propFields: [{
+    key: 'hint',
+    label: 'Chamada superior',
+    type: 'rich',
+    inline: true
+  }, {
+    key: 'accent',
+    label: 'Cor de acento',
+    type: 'accent'
+  }],
+  props: {
+    hint: 'Explore os slides',
+    accent: '',
+    slides: [{
+      showImage: true,
+      slot: '',
+      alt: '',
+      caption: '',
+      label: 'Etiqueta',
+      title: 'Título do slide',
+      subtitle: 'Subtítulo opcional',
+      description: '<p>Descrição opcional do conteúdo.</p>',
+      linkHref: '',
+      linkLabel: ''
+    }, {
+      showImage: false,
+      slot: '',
+      alt: '',
+      caption: '',
+      label: '',
+      title: 'Outro título de slide',
+      subtitle: '',
+      description: '',
+      linkHref: '',
+      linkLabel: ''
+    }]
+  }
+}, {
   type: 'bleedimage',
   component: 'BleedImage',
   label: 'Imagem full-bleed',
@@ -2596,6 +2695,11 @@ function Editable({
       if (single && e.key === 'Enter') {
         e.preventDefault();
         ref.current && ref.current.blur();
+      } else if (!single && e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.execCommand('defaultParagraphSeparator', false, 'p');
+        document.execCommand('insertParagraph', false, null);
+        ref.current && fireInput(ref.current);
       }
     },
     onMouseDown: e => e.stopPropagation()
@@ -3864,6 +3968,109 @@ function Carousel({
 }
 Object.assign(__ds_scope, { Carousel });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/interactive/Carousel.jsx", error: String((e && e.message) || e) }); }
+
+// components/interactive/ContentSlider.jsx
+try { (() => {
+__ds_scope.injectCss('spu-content-slider-css', `
+.spu-content-slider{--_cs:var(--color-primary);overflow:hidden;border:1px solid var(--color-border);border-radius:calc(var(--radius-md) + 4px);background:var(--color-surface);box-shadow:var(--shadow-md)}
+.spu-content-slider__top{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding:var(--space-4) var(--space-5);border-bottom:1px solid var(--color-border);background:color-mix(in srgb,var(--_cs) 7%,var(--color-surface))}
+.spu-content-slider__hint{font-family:var(--font-mono);font-size:var(--fs-caption);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--_cs)}
+.spu-content-slider__count{font-family:var(--font-mono);font-size:var(--fs-small);color:var(--text-faint);white-space:nowrap}.spu-content-slider__count strong{color:var(--_cs);font-size:1.12em}
+.spu-content-slider__viewport{overflow:hidden}.spu-content-slider__track{display:flex;transition:transform 560ms var(--ease-out);touch-action:pan-y}
+.spu-content-slider__slide{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(300px,.92fr);min-width:100%;background:var(--color-surface)}
+.spu-content-slider__slide--text{grid-template-columns:1fr}.spu-content-slider__slide--text .spu-content-slider__body{width:min(100%,780px);min-height:390px;margin-inline:auto}
+.spu-content-slider__media{position:relative;min-height:390px;margin:0;overflow:hidden;background:var(--color-surface-warm)}
+.spu-content-slider__media image-slot,.spu-content-slider__media img{display:block;width:100%;height:100%;object-fit:cover}.spu-content-slider__media image-slot{position:absolute;inset:0}
+.spu-content-slider__media figcaption{position:absolute;left:var(--space-4);bottom:var(--space-4);z-index:1;max-width:calc(100% - var(--space-8));padding:.55em .8em;border-radius:var(--radius);background:rgba(18,35,31,.84);color:#fff;font-family:var(--font-mono);font-size:var(--fs-caption)}
+.spu-content-slider__body{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(var(--space-6),5vw,var(--space-10))}
+.spu-content-slider__label{display:inline-flex;padding:.35em .65em;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--_cs) 12%,var(--color-surface));color:var(--_cs);font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.spu-content-slider__title{margin:var(--space-3) 0 0;font-family:var(--font-display);font-size:clamp(1.75rem,3.5vw,var(--fs-h2));line-height:1.04;letter-spacing:var(--ls-heading);color:var(--text-strong)}
+.spu-content-slider__subtitle{margin:var(--space-3) 0 0;font-family:var(--font-display);font-size:var(--fs-h5);font-weight:600;line-height:1.25;color:var(--_cs)}
+.spu-content-slider__description{margin-top:var(--space-4);color:var(--text-muted)}
+.spu-content-slider__link{display:inline-flex;align-items:center;gap:var(--space-2);margin-top:var(--space-6);padding:.72em 1em;border:1px solid var(--_cs);border-radius:var(--radius);background:var(--_cs);color:#fff;text-decoration:none;font-family:var(--font-display);font-weight:700}.spu-content-slider__link:hover{filter:brightness(1.06)}
+.spu-content-slider__controls{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:stretch;border-top:1px solid var(--color-border)}
+.spu-content-slider__arrow{display:grid;place-items:center;min-width:72px;padding:var(--space-4);border:0;background:var(--color-surface);color:var(--text-strong);cursor:pointer}.spu-content-slider__arrow:hover{background:var(--color-surface-warm)}
+.spu-content-slider__nav{display:grid;grid-template-columns:repeat(var(--_count),minmax(90px,1fr));overflow-x:auto;border-inline:1px solid var(--color-border)}
+.spu-content-slider__tab{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:.15em;min-width:0;padding:var(--space-3) var(--space-4);border:0;border-right:1px solid var(--color-border);background:var(--color-surface);color:var(--text-muted);text-align:left;cursor:pointer}.spu-content-slider__tab:last-child{border-right:0}.spu-content-slider__tab::after{content:"";position:absolute;inset:auto 0 0;height:4px;background:transparent}.spu-content-slider__tab.is-active{background:color-mix(in srgb,var(--_cs) 7%,var(--color-surface));color:var(--text-strong)}.spu-content-slider__tab.is-active::after{background:var(--_cs)}
+.spu-content-slider__tab span{font-family:var(--font-mono);font-size:var(--fs-eyebrow);color:var(--_cs)}.spu-content-slider__tab b{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--font-display);font-size:var(--fs-small)}
+.spu-content-slider:focus-visible{outline:3px solid var(--color-focus-ring);outline-offset:3px}
+.spu-content-slider--print .spu-content-slider__track{display:block;transform:none!important}.spu-content-slider--print .spu-content-slider__slide{break-inside:avoid;margin-bottom:var(--space-6)}.spu-content-slider--print .spu-content-slider__controls{display:none}
+@media(max-width:760px){.spu-content-slider__slide{grid-template-columns:1fr}.spu-content-slider__media{min-height:0;aspect-ratio:16/10}.spu-content-slider__body,.spu-content-slider__slide--text .spu-content-slider__body{min-height:0;padding:var(--space-6)}.spu-content-slider__top{padding:var(--space-3) var(--space-4)}.spu-content-slider__arrow{min-width:52px;padding:var(--space-3)}.spu-content-slider__tab{align-items:center;padding:var(--space-3) var(--space-2)}.spu-content-slider__tab b{display:none}}
+@media print{.spu-content-slider__track{display:block!important;transform:none!important}.spu-content-slider__slide{break-inside:avoid;margin-bottom:var(--space-6)}.spu-content-slider__controls{display:none!important}}
+`);
+
+function ContentSliderImage({ id, alt }) {
+  return React.createElement('image-slot', {
+    id,
+    shape: 'rect',
+    fit: 'cover',
+    alt: alt || '',
+    placeholder: 'Arraste uma imagem',
+    style: { display: 'block', width: '100%', height: '100%' }
+  });
+}
+function ContentSlider({ slides = [], hint = 'Explore os slides', accent, className, style }) {
+  const [current, setCurrent] = React.useState(0);
+  const startX = React.useRef(null);
+  const printing = __ds_scope.isPrint();
+  const n = slides.length;
+  React.useEffect(() => { if (current >= n) setCurrent(Math.max(0, n - 1)); }, [current, n]);
+  const go = next => { if (n) setCurrent((next + n) % n); };
+  const vars = { ...style, ...(accent ? { '--_cs': accent } : {}) };
+  if (!n) return null;
+  return React.createElement('div', {
+    className: __ds_scope.cx('spu-content-slider', printing && 'spu-content-slider--print', className),
+    style: vars,
+    tabIndex: printing ? undefined : 0,
+    role: 'region',
+    'aria-roledescription': 'carrossel',
+    'aria-label': 'Slider de conteúdo',
+    onKeyDown: printing ? undefined : e => { if (e.key === 'ArrowLeft') { e.preventDefault(); go(current - 1); } if (e.key === 'ArrowRight') { e.preventDefault(); go(current + 1); } }
+  }, React.createElement('div', { className: 'spu-content-slider__top' },
+    React.createElement('span', { className: 'spu-content-slider__hint' }, __ds_scope.renderRich(hint, { inline: true })),
+    React.createElement('span', { className: 'spu-content-slider__count' }, React.createElement('strong', null, String(current + 1).padStart(2, '0')), ' / ', String(n).padStart(2, '0'))
+  ), React.createElement('div', { className: 'spu-content-slider__viewport' },
+    React.createElement('div', {
+      className: 'spu-content-slider__track',
+      style: { transform: printing ? undefined : `translateX(-${current * 100}%)` },
+      onPointerDown: printing ? undefined : e => { startX.current = e.clientX; },
+      onPointerUp: printing ? undefined : e => { if (startX.current == null) return; const d = e.clientX - startX.current; if (Math.abs(d) > 48) go(current + (d < 0 ? 1 : -1)); startX.current = null; },
+      onPointerCancel: () => { startX.current = null; }
+    }, slides.map((slide, index) => {
+      const hasImage = !!slide.showImage && !!slide.slot;
+      const href = typeof slide.linkHref === 'string' ? slide.linkHref.trim() : slide.linkHref;
+      return React.createElement('article', {
+        key: slide.id || slide.slot || index,
+        className: __ds_scope.cx('spu-content-slider__slide', !hasImage && 'spu-content-slider__slide--text'),
+        'aria-hidden': printing ? undefined : index !== current,
+        inert: !printing && index !== current ? true : undefined
+      }, hasImage && React.createElement('figure', { className: 'spu-content-slider__media' },
+        React.createElement(ContentSliderImage, { id: slide.slot, alt: slide.alt }),
+        slide.caption && React.createElement('figcaption', null, __ds_scope.renderRich(slide.caption, { inline: true }))
+      ), React.createElement('div', { className: 'spu-content-slider__body' },
+        slide.label && React.createElement('span', { className: 'spu-content-slider__label' }, __ds_scope.renderRich(slide.label, { inline: true })),
+        React.createElement('h3', { className: 'spu-content-slider__title' }, __ds_scope.renderRich(slide.title || 'Título do slide', { inline: true })),
+        slide.subtitle && React.createElement('p', { className: 'spu-content-slider__subtitle' }, __ds_scope.renderRich(slide.subtitle, { inline: true })),
+        slide.description && React.createElement('div', { className: 'spu-content-slider__description' }, __ds_scope.renderRich(slide.description)),
+        href && React.createElement('a', { className: 'spu-content-slider__link', href, target: /^https?:/i.test(href) ? '_blank' : undefined, rel: /^https?:/i.test(href) ? 'noopener' : undefined }, __ds_scope.renderRich(slide.linkLabel || 'Saiba mais', { inline: true }), React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 16 }))
+      ));
+    }))
+  ), !printing && n > 1 && React.createElement('div', { className: 'spu-content-slider__controls' },
+    React.createElement('button', { type: 'button', className: 'spu-content-slider__arrow', onClick: () => go(current - 1), 'aria-label': 'Slide anterior' }, React.createElement(__ds_scope.Icon, { name: 'arrow-left', size: 20 })),
+    React.createElement('div', { className: 'spu-content-slider__nav', role: 'tablist', style: { '--_count': n } }, slides.map((slide, index) => React.createElement('button', {
+      key: index,
+      type: 'button',
+      role: 'tab',
+      className: __ds_scope.cx('spu-content-slider__tab', index === current && 'is-active'),
+      'aria-selected': index === current,
+      tabIndex: index === current ? 0 : -1,
+      onClick: () => setCurrent(index)
+    }, React.createElement('span', null, String(index + 1).padStart(2, '0')), React.createElement('b', null, __ds_scope.renderRich(slide.label || slide.title || `Slide ${index + 1}`, { inline: true }))))),
+    React.createElement('button', { type: 'button', className: 'spu-content-slider__arrow', onClick: () => go(current + 1), 'aria-label': 'Próximo slide' }, React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 20 }))
+  ));
+}
+Object.assign(__ds_scope, { ContentSlider });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/interactive/ContentSlider.jsx", error: String((e && e.message) || e) }); }
 
 // components/interactive/GlossaryTerm.jsx
 try { (() => {
@@ -8379,6 +8586,8 @@ __ds_ns.TONES = __ds_scope.TONES;
 __ds_ns.Accordion = __ds_scope.Accordion;
 
 __ds_ns.Carousel = __ds_scope.Carousel;
+
+__ds_ns.ContentSlider = __ds_scope.ContentSlider;
 
 __ds_ns.CompareAB = __ds_scope.CompareAB;
 

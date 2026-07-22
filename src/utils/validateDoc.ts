@@ -60,6 +60,23 @@ export function validateDoc(doc: Doc): DocIssue[] {
       });
     }
 
+    if (block.type === 'contentslider') {
+      const slides = Array.isArray(props.slides) ? props.slides : [];
+      if (!slides.length) {
+        issues.push({ id: `${block.id}:slides`, blockId: block.id, level: 'warn', text: 'Slider de conteúdo sem slides.' });
+      }
+      slides.forEach((slide, index) => {
+        if (!isObj(slide) || !stripHtml(slide.title).trim()) {
+          issues.push({
+            id: `${block.id}:slide:${index}:title`,
+            blockId: block.id,
+            level: 'warn',
+            text: `Slide ${index + 1} sem título.`,
+          });
+        }
+      });
+    }
+
     if (block.type === 'pagefooter') {
       const credits = Array.isArray(props.credits) ? props.credits : [];
       if (!credits.length || credits.every((c) => !isObj(c) || !String(c.name || '').trim() || String(c.name || '').trim() === '—')) {
@@ -80,6 +97,7 @@ function collectSlotRefs(value: unknown, path: Array<string | number> = []): Arr
   return Object.entries(value).flatMap(([key, current]) => {
     const nextPath = [...path, key];
     if ((key === 'slot' || key.endsWith('Slot')) && typeof current === 'string') {
+      if (key === 'slot' && value.showImage === false) return [];
       return [{ path: nextPath.join('.'), value: current }];
     }
     return collectSlotRefs(current, nextPath);

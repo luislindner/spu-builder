@@ -111,18 +111,18 @@ export function docReducer(state: DocState, action: DocAction): DocState {
         break;
 
       case 'ADD_TOP':
-        blocks.push(prepare(action.block) as never);
+        blocks.push(prepareBlock(action.block) as never);
         break;
 
       case 'ADD_TOP_AT':
-        blocks.splice(clampIndex(action.index, blocks.length), 0, prepare(action.block) as never);
+        blocks.splice(clampIndex(action.index, blocks.length), 0, prepareBlock(action.block) as never);
         break;
 
       case 'ADD_CHILD': {
         const parent = findBlock(blocks, action.parentId);
         if (parent) {
           if (!parent.children) parent.children = [];
-          parent.children.push(prepare(action.block) as never);
+          parent.children.push(prepareBlock(action.block) as never);
         }
         break;
       }
@@ -131,7 +131,7 @@ export function docReducer(state: DocState, action: DocAction): DocState {
         const parent = findBlock(blocks, action.parentId);
         if (parent) {
           if (!parent.children) parent.children = [];
-          parent.children.splice(clampIndex(action.index, parent.children.length), 0, prepare(action.block) as never);
+          parent.children.splice(clampIndex(action.index, parent.children.length), 0, prepareBlock(action.block) as never);
         }
         break;
       }
@@ -254,7 +254,7 @@ function normalizeFigureSize(size: string): string {
   return aliases[size.toLowerCase()] || size;
 }
 
-function prepare(block: Block): Block {
+export function prepareBlock(block: Block): Block {
   return assignSlots(normalizeContainer(block));
 }
 
@@ -269,6 +269,7 @@ function assignSlots(block: Block): Block {
 function reassignIds(block: Block): Block {
   block.id = uid();
   if (block.children) block.children.forEach(reassignIds);
+  visitEmbeddedBlocks(block.props, reassignIds);
   return block;
 }
 
@@ -276,7 +277,22 @@ function reassignIds(block: Block): Block {
 function reassignSlots(block: Block): Block {
   visitSlotProps(block.props || {}, block.id, [], true);
   if (block.children) block.children.forEach(reassignSlots);
+  visitEmbeddedBlocks(block.props, reassignSlots);
   return block;
+}
+
+function visitEmbeddedBlocks(value: unknown, visit: (block: Block) => void): void {
+  if (Array.isArray(value)) {
+    value.forEach((item) => visitEmbeddedBlocks(item, visit));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+  const object = value as Record<string, unknown>;
+  if (typeof object.id === 'string' && typeof object.type === 'string' && object.props && typeof object.props === 'object') {
+    visit(object as unknown as Block);
+    return;
+  }
+  Object.values(object).forEach((item) => visitEmbeddedBlocks(item, visit));
 }
 
 // Percorre também listas/objetos internos (slides, itens de accordion e marcos
