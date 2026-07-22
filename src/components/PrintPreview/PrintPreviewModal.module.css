@@ -115,7 +115,6 @@
   break-inside: avoid;
 }
 
-.sheet :global(.spu-figure__frame),
 .sheet :global(.spu-map__frame),
 .sheet :global(.spu-bleedimg__frame),
 .sheet :global(.spu-reveal),
@@ -128,7 +127,6 @@
   overflow: hidden;
 }
 
-.sheet :global(.spu-figure__frame img),
 .sheet :global(.spu-map__img),
 .sheet :global(.spu-bleedimg__frame img),
 .sheet :global(.spu-reveal img),
@@ -137,7 +135,6 @@
 .sheet :global(.spu-acc__media img),
 .sheet :global(.spu-tl__media img),
 .sheet :global(.spu-twi__media img),
-.sheet :global(.spu-figure__frame > image-slot),
 .sheet :global(.spu-map__frame image-slot),
 .sheet :global(.spu-bleedimg__frame image-slot),
 .sheet :global(.spu-reveal image-slot),
@@ -148,6 +145,61 @@
 .sheet :global(.spu-twi__media image-slot) {
   max-height: var(--spu-print-image-max-height) !important;
   object-fit: contain !important;
+}
+
+.sheet :global(.spu-figure__frame) {
+  max-height: none !important;
+  overflow: hidden;
+}
+
+.sheet :global(.spu-figure__frame img),
+.sheet :global(.spu-figure__frame > image-slot) {
+  width: 100% !important;
+  max-height: none !important;
+  object-fit: contain !important;
+}
+
+.sheet :global(image-slot:not([data-filled])),
+.sheet :global(.spu-carousel__slide:has(.spu-figure__frame > image-slot:not([data-filled]))),
+.sheet :global(.spu-figure:has(.spu-figure__frame > image-slot:not([data-filled]))),
+.sheet :global(.spu-acc__media:has(image-slot:not([data-filled]))),
+.sheet :global(.spu-tl__media:has(image-slot:not([data-filled]))) {
+  display: none !important;
+}
+
+/* A prévia A4 é exibida em tela, portanto replica aqui a expansão que o DS
+   aplica apenas dentro de @media print. */
+.sheet :global(.spu-flip) {
+  cursor: auto;
+  break-inside: avoid;
+}
+
+.sheet :global(.spu-flip__inner) {
+  transform: none !important;
+  min-height: 0 !important;
+}
+
+.sheet :global(.spu-flip__face) {
+  position: static !important;
+  transform: none !important;
+  backface-visibility: visible !important;
+  -webkit-backface-visibility: visible !important;
+  box-shadow: none;
+  opacity: 1 !important;
+}
+
+.sheet :global(.spu-flip__face--front) {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-bottom: 0;
+}
+
+.sheet :global(.spu-flip__face--back) {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.sheet :global(.spu-flip__hint),
+.sheet :global(.spu-flip__cue) {
+  display: none !important;
 }
 
 .pageBreakBefore {

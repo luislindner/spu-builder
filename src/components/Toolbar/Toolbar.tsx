@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { NS, Doc } from '../../types/ds';
 import { exportAssetsZip, exportScormZip, exportSelfContained } from '../../utils/exportFormats';
+import { normalizeProjectContent } from '../../utils/projectCompat';
 import styles from './Toolbar.module.css';
 
 const SLOT_KEY = 'spu_image_slots';
@@ -16,11 +17,11 @@ interface Props {
   onOpenDoc: (doc: Doc) => void;
   onPreview: () => void;
   onPrintPreview: () => void;
-  onTocChange: (patch: Record<string, unknown>) => void;
+  onMetaChange: (patch: Record<string, unknown>) => void;
   onClearDoc: () => void;
 }
 
-export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChange, onOpenDoc, onPreview, onPrintPreview, onTocChange, onClearDoc }: Props) {
+export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChange, onOpenDoc, onPreview, onPrintPreview, onMetaChange, onClearDoc }: Props) {
   const { BuilderExport } = ns;
   const fileInput = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -32,6 +33,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
   const toc = doc.meta.toc || {};
   const tocItems = toc.items || [];
   const tocEnabled = toc.enabled !== false; // default ligado
+  const builderCreditEnabled = doc.meta.builderCredit !== false;
 
   const runExport = async (label: string, fn: (doc: Doc) => Promise<void>) => {
     setExporting(true);
@@ -70,7 +72,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
     reader.onload = () => {
       try {
         const { raw, imageSlots } = parseProjectFile(String(reader.result), file.name);
-        const migrated = BuilderExport.migrate(raw);
+        const migrated = BuilderExport.migrate(normalizeProjectContent(raw));
         const safe = BuilderExport.sanitize ? BuilderExport.sanitize(migrated) : migrated;
         if (imageSlots) localStorage.setItem(SLOT_KEY, imageSlots);
         onOpenDoc(safe);
@@ -118,7 +120,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
           {tocOpen && (
             <div className={styles.tocPop} onMouseLeave={() => setTocOpen(false)}>
               <label className={styles.tocToggle}>
-                <input type="checkbox" checked={tocEnabled} onChange={(e) => onTocChange({ toc: { ...toc, enabled: e.target.checked } })} />
+                <input type="checkbox" checked={tocEnabled} onChange={(e) => onMetaChange({ toc: { ...toc, enabled: e.target.checked } })} />
                 Mostrar sumário na página
               </label>
               <div className={styles.tocList}>
@@ -129,7 +131,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
                       <input
                         type="checkbox"
                         checked={!it.hidden}
-                        onChange={(e) => onTocChange({ toc: { ...toc, items: tocItems.map((x) => x.id === it.id ? { ...x, hidden: !e.target.checked } : x) } })}
+                        onChange={(e) => onMetaChange({ toc: { ...toc, items: tocItems.map((x) => x.id === it.id ? { ...x, hidden: !e.target.checked } : x) } })}
                       />
                       <span dangerouslySetInnerHTML={{ __html: it.text || '(sem título)' }} />
                     </label>
@@ -156,6 +158,17 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
           </button>
           {exportOpen && (
             <div className={styles.exportPop} onMouseLeave={() => setExportOpen(false)}>
+              <label className={styles.exportOption}>
+                <input
+                  type="checkbox"
+                  checked={builderCreditEnabled}
+                  onChange={(e) => onMetaChange({ builderCredit: e.target.checked })}
+                />
+                <span>
+                  <strong>Crédito do SPU Builder</strong>
+                  <small>Mostrar no final da página gerada.</small>
+                </span>
+              </label>
               <button onClick={() => runExport('HTML', exportSelfContained)}>
                 <strong>HTML autocontido</strong>
                 <span>Um arquivo único, mais simples de compartilhar.</span>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import type { Block, Doc, NS } from '../../types/ds';
 import { collectRichNotes } from '../../utils/richNotes';
 import styles from './PrintPreviewModal.module.css';
@@ -94,6 +94,7 @@ function stripPrintMarkers(block: Block): Block {
 export function PrintPreviewModal({ ns, doc, onClose }: Props) {
   const [printModeReady, setPrintModeReady] = useState(false);
   const BlockView = ns.BlockView;
+  const BuilderCredit = ns.BuilderCredit as ComponentType<Record<string, never>> | undefined;
   const printDoc = useMemo(() => preparePrintDoc(doc), [doc]);
   const answerKeys = useMemo(() => collectQuizKeys(printDoc.blocks), [printDoc.blocks]);
   const richNotes = useMemo(() => collectRichNotes(printDoc.blocks), [printDoc.blocks]);
@@ -178,6 +179,7 @@ export function PrintPreviewModal({ ns, doc, onClose }: Props) {
                 </ol>
               </section>
             )}
+            {doc.meta.builderCredit !== false && BuilderCredit && <BuilderCredit />}
           </>
         )}
       </main>

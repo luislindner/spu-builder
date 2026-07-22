@@ -14,6 +14,7 @@ const COMPAT_WRAPPED_TYPES = [
   'quiz',
   'flashcard',
   'compareab',
+  'carousel',
 ] as const;
 
 const RICH_ITEM_FIELDS: Record<string, string[]> = {
@@ -26,6 +27,7 @@ const RICH_ITEM_FIELDS: Record<string, string[]> = {
   accordion: ['title', 'content', 'linkLabel'],
   timeline: ['label', 'period', 'date', 'title', 'content', 'linkLabel'],
   quiz: ['question', 'text', 'feedback'],
+  carousel: ['title', 'caption', 'credit'],
 };
 
 const RICH_PROP_FIELDS: Record<string, string[]> = {

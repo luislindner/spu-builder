@@ -3,6 +3,8 @@ import type { Doc, Block } from '../types/ds';
 
 // Ações id-based: operam em qualquer profundidade da árvore de blocos.
 export type DocAction =
+  | { type: 'UNDO' }
+  | { type: 'REDO' }
   | { type: 'SET_DOC'; doc: Doc }
   | { type: 'SET_TITLE'; title: string }
   | { type: 'ADD_TOP'; block: Block }                         // bloco no nível raiz
@@ -74,6 +76,9 @@ export function isDescendantOf(blocks: Block[], id: string, possibleAncestorId: 
 }
 
 export function docReducer(state: DocState, action: DocAction): DocState {
+  if (action.type === 'UNDO') return undo(state);
+  if (action.type === 'REDO') return redo(state);
+
   if (action.type === 'SET_DOC') {
     const doc = { ...action.doc, blocks: (action.doc.blocks || []).map(b => normalizeContainer(b)) };
     return { doc, past: [], future: [] };
@@ -209,10 +214,11 @@ function normalizeContainer(block: Block): Block {
   const props = { ...(block.props || {}) };
   const normalized: Block = { ...block, props };
 
-  if (normalized.children == null && Array.isArray(props.children)) {
+  const nestedChildren = Array.isArray(props.children);
+  if (normalized.children == null && nestedChildren) {
     normalized.children = props.children as Block[];
   }
-  if (props && 'children' in props) delete (props as Record<string, unknown>).children;
+  if (nestedChildren) delete (props as Record<string, unknown>).children;
   applyBuilderDefaults(normalized);
   if (normalized.children) normalized.children = normalized.children.map(normalizeContainer);
   return normalized;
@@ -254,12 +260,7 @@ function prepare(block: Block): Block {
 
 // Atribui ids de slot estáveis aos campos de imagem vazios (slot/*Slot).
 function assignSlots(block: Block): Block {
-  const props = block.props || {};
-  for (const key of Object.keys(props)) {
-    if ((key === 'slot' || key.endsWith('Slot')) && props[key] === '') {
-      props[key] = `${block.id}__${key}`;
-    }
-  }
+  visitSlotProps(block.props || {}, block.id, [], false);
   if (block.children) block.children.forEach(assignSlots);
   return block;
 }
@@ -273,14 +274,31 @@ function reassignIds(block: Block): Block {
 
 // Reatribui ids de slot novos (usado ao duplicar, para não compartilhar imagem).
 function reassignSlots(block: Block): Block {
-  const props = block.props || {};
-  for (const key of Object.keys(props)) {
-    if ((key === 'slot' || key.endsWith('Slot')) && typeof props[key] === 'string' && props[key]) {
-      props[key] = `${block.id}__${key}`;
-    }
-  }
+  visitSlotProps(block.props || {}, block.id, [], true);
   if (block.children) block.children.forEach(reassignSlots);
   return block;
+}
+
+// Percorre também listas/objetos internos (slides, itens de accordion e marcos
+// da timeline). O caminho faz cada imagem do mesmo bloco receber um id único.
+function visitSlotProps(value: unknown, blockId: string, path: Array<string | number>, replace: boolean): void {
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => visitSlotProps(item, blockId, [...path, index], replace));
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+
+  const object = value as Record<string, unknown>;
+  Object.keys(object).forEach((key) => {
+    const current = object[key];
+    const isSlot = key === 'slot' || key.endsWith('Slot');
+    if (isSlot && typeof current === 'string' && (replace || current === '')) {
+      const suffix = [...path, key].join('_');
+      object[key] = `${blockId}__${suffix}`;
+      return;
+    }
+    visitSlotProps(current, blockId, [...path, key], replace);
+  });
 }
 
 function uid() {

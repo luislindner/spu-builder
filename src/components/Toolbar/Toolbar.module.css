@@ -154,6 +154,34 @@
   box-shadow: var(--shadow-lg);
 }
 
+.exportOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--text-body);
+  cursor: pointer;
+}
+
+.exportOption input {
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+}
+
+.exportOption > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exportOption small {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .exportPop button {
   display: flex;
   flex-direction: column;
