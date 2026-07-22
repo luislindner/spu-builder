@@ -420,6 +420,7 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
         <InsertBlockButton
           ns={ns}
           allowedTypes={allowedTypes}
+          embedded
           onInsert={(type) => {
             const nested = ns.BlockRegistry.newBlock(type);
             if (nested) updateBlocks(itemIndex, [...blocks, prepareBlock(nested)]);

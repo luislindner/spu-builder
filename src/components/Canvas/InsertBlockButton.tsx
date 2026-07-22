@@ -9,6 +9,7 @@ interface Props {
   allowedTypes: string[];
   onInsert: (type: string) => void;
   spacing?: 'default' | 'title' | 'tight';
+  embedded?: boolean;
 }
 
 interface MenuPosition {
@@ -19,7 +20,7 @@ interface MenuPosition {
   maxHeight: number;
 }
 
-export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'default' }: Props) {
+export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'default', embedded = false }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [position, setPosition] = useState<MenuPosition | null>(null);
@@ -89,9 +90,9 @@ export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'defau
       <button
         ref={buttonRef}
         type="button"
-        className={`${styles.trigger} ${spacing === 'title' ? styles.triggerTitle : spacing === 'tight' ? styles.triggerTight : ''}`}
-        title="Inserir bloco aqui"
-        aria-label="Inserir bloco aqui"
+        className={`${styles.trigger} ${embedded ? styles.triggerEmbedded : spacing === 'title' ? styles.triggerTitle : spacing === 'tight' ? styles.triggerTight : ''}`}
+        title={embedded ? 'Adicionar bloco ao item' : 'Inserir bloco aqui'}
+        aria-label={embedded ? 'Adicionar bloco ao item' : 'Inserir bloco aqui'}
         aria-expanded={open}
         onClick={(event) => {
           event.stopPropagation();
@@ -100,6 +101,7 @@ export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'defau
         onPointerDown={(event) => event.stopPropagation()}
       >
         <span aria-hidden="true">+</span>
+        {embedded && <span>Adicionar bloco ao item</span>}
       </button>
       {open && position && createPortal(
         <div
