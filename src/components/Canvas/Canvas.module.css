@@ -36,6 +36,16 @@
   margin-bottom: calc(-1 * var(--flow-block) + var(--space-2));
 }
 
+/* H3/H4 da pilha principal pertencem ao conteúdo seguinte. O seletor direto
+   impede que o ajuste alcance títulos internos de painéis, colunas e recursos. */
+.containerWrap[data-block-type='section']
+  > :global(.spu-section)
+  > :global(.spu-section__inner)
+  > .stack
+  > .leafSubheadingAfter:not(:last-child) {
+  margin-bottom: calc(-1 * var(--flow-block) + var(--space-3));
+}
+
 /* ── Container (Section / Columns) ── */
 .containerWrap {
   position: relative;

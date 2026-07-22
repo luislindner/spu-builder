@@ -1033,10 +1033,15 @@ const BLOCKS = [
     key: 'icon',
     label: 'Ícone do bullet',
     type: 'icon'
+  }, {
+    key: 'accent',
+    label: 'Cor dos marcadores',
+    type: 'accent'
   }],
   props: {
     variant: 'ordered',
     icon: 'check',
+    accent: '',
     items: [{
       title: 'Identificar',
       text: 'Localizar o imóvel no cadastro SPU.'
@@ -2371,6 +2376,7 @@ __ds_scope.injectCss('spu-table-css', `
 .spu-table-wrap--tone-petrol .spu-table th{background:var(--petrol-700);color:#fff}
 .spu-table-wrap--tone-terra .spu-table th{background:var(--terra-700);color:#fff}
 .spu-table-wrap--tone-ochre .spu-table th{background:var(--ochre-700);color:#fff}
+.spu-table .spu-richtext{line-height:inherit}
 `);
 function DataTable({
   columns = [],
@@ -2389,15 +2395,21 @@ function DataTable({
     style
   }, React.createElement('table', {
     className: __ds_scope.cx('spu-table', dense && 'spu-table--dense', highlightFirst && 'spu-table__firstcol')
-  }, caption && React.createElement('caption', null, caption), React.createElement('thead', null, React.createElement('tr', null, columns.map((c, i) => React.createElement('th', {
-    key: i,
-    className: alignCls(c.align)
-  }, c.label)))), React.createElement('tbody', null, rows.map((r, ri) => React.createElement('tr', {
+  },
+  caption && React.createElement('caption', null, __ds_scope.renderRich(caption, { inline: true })),
+  React.createElement('thead', null,
+    React.createElement('tr', null, columns.map((c, i) => React.createElement('th', {
+      key: i,
+      className: alignCls(c.align)
+    }, __ds_scope.renderRich(c.label, { inline: true }))))
+  ),
+  React.createElement('tbody', null, rows.map((r, ri) => React.createElement('tr', {
     key: ri
   }, columns.map((c, ci) => React.createElement('td', {
     key: ci,
     className: alignCls(c.align)
-  }, r[c.key])))))));
+  }, __ds_scope.renderRich(r[c.key], { inline: true })))))
+  )));
 }
 Object.assign(__ds_scope, { DataTable });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/DataTable.jsx", error: String((e && e.message) || e) }); }
@@ -4791,17 +4803,18 @@ try { (() => {
 __ds_scope.injectCss('spu-mlist-css', `
 .spu-mlist{list-style:none;margin:var(--flow-text) 0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)}
 .spu-mlist__item{display:flex;gap:var(--space-3);align-items:flex-start}
-.spu-mlist__num{flex:0 0 auto;width:30px;height:30px;border-radius:var(--radius-pill);background:var(--color-primary);color:var(--color-on-primary);font-family:var(--font-mono);font-size:.85rem;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
-.spu-mlist__check{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);background:var(--status-success-soft);color:var(--status-success);display:flex;align-items:center;justify-content:center;margin-top:2px}
-.spu-mlist__icon{flex:0 0 auto;width:30px;height:30px;border-radius:var(--radius-pill);background:var(--color-primary-soft);color:var(--color-primary-strong);display:flex;align-items:center;justify-content:center;margin-top:1px}
-.spu-mlist__dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--color-accent);margin-top:.58em}
-.spu-mlist__body{color:var(--text-body)}
-.spu-mlist__title{display:block;font-weight:700;color:var(--text-strong)}
+.spu-mlist__num{flex:0 0 auto;width:30px;height:30px;border-radius:var(--radius-pill);background:var(--_ml-color,var(--color-primary));color:var(--color-on-primary);font-family:var(--font-mono);font-size:.85rem;font-weight:600;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.spu-mlist__check{flex:0 0 auto;width:26px;height:26px;border-radius:var(--radius-pill);background:var(--_ml-soft,var(--status-success-soft));color:var(--_ml-color,var(--status-success));display:flex;align-items:center;justify-content:center;margin-top:2px}
+.spu-mlist__icon{flex:0 0 auto;width:30px;height:30px;border-radius:var(--radius-pill);background:var(--_ml-soft,var(--color-primary-soft));color:var(--_ml-color,var(--color-primary-strong));display:flex;align-items:center;justify-content:center;margin-top:1px}
+.spu-mlist__dot{flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:var(--_ml-color,var(--color-accent));margin-top:.58em}
+.spu-mlist__body{color:var(--text-body);line-height:var(--lh-snug)}
+.spu-mlist__title{display:block;font-weight:700;color:var(--text-strong);margin-bottom:.2rem;margin-top:.3rem}
 `);
 function MarkerList({
   items = [],
   variant = 'ordered',
   icon = 'check',
+  accent,
   className,
   style
 }) {
@@ -4809,7 +4822,13 @@ function MarkerList({
   const Tag = ordered ? 'ol' : 'ul';
   return React.createElement(Tag, {
     className: __ds_scope.cx('spu-mlist', className),
-    style
+    style: {
+      ...(accent ? {
+        '--_ml-color': accent,
+        '--_ml-soft': `color-mix(in srgb, ${accent} 14%, transparent)`
+      } : null),
+      ...style
+    }
   }, items.map((it, i) => {
     const obj = typeof it === 'string' ? {
       text: it
@@ -6007,6 +6026,7 @@ __ds_scope.injectCss('spu-section-css', `
 .spu-blockstack.spu-blockstack>*:not(.spu-block-title):not(.spu-block-kicker){margin-block:0}
 .spu-block-title{margin:0}
 .spu-block-title .spu-richtext{line-height:inherit}
+.spu-section__inner>.spu-blockstack>.spu-block-title:is(h3,h4):not(:last-child){margin-bottom:calc(-1 * var(--flow-block) + var(--space-3))}
 .spu-section__inner{margin-inline:auto;padding-inline:var(--gutter)}
 .spu-section--narrow .spu-section__inner{max-width:var(--container-prose)}
 .spu-section--content .spu-section__inner{max-width:var(--container-content)}
@@ -6045,6 +6065,7 @@ __ds_scope.injectCss('spu-section-css', `
 /* —— Cartões com fundo próprio claro: restauram os tokens escuros —— */
 .spu-section--dark .spu-callout,
 .spu-section--dark .spu-panel,
+.spu-section--dark .spu-table-wrap,
 .spu-section--dark .spu-acc,
 .spu-section--dark .spu-example,
 .spu-section--dark .spu-examplecard,

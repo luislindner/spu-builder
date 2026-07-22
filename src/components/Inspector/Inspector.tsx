@@ -189,10 +189,10 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
       {block.type === 'datatable' && (
         <>
-          {textField('caption', false)}
+          {textField('caption', true)}
           <div className={styles.field}>
             <label className={styles.label}>Dados</label>
-            <TableEditor block={block} onPatch={patch} />
+            <TableEditor key={block.id} ns={ns} block={block} onPatch={patch} />
           </div>
         </>
       )}
