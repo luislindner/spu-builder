@@ -31,6 +31,7 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
   const def: BlockDef | undefined = ns.BlockRegistry.byType[block.type];
   const isContainer = def?.kind === 'container';
   const isSelected = selectedId === block.id;
+  const isCompactSubheading = block.type === 'titulo' && ['h3', 'h4'].includes(String(block.props.level || ''));
   const insertTypes = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
   const insertAfter = (
     <InsertBlockButton
@@ -88,7 +89,10 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
       style={style}
       data-block-id={block.id}
       data-block-type={block.type}
-      className={styles.leafWrap + (block.type === 'kicker' ? ` ${styles.leafCompactAfter}` : '') + (isSelected ? ` ${styles.leafSelected}` : '')}
+      className={styles.leafWrap
+        + (block.type === 'kicker' ? ` ${styles.leafCompactAfter}` : '')
+        + (isCompactSubheading ? ` ${styles.leafSubheadingAfter}` : '')
+        + (isSelected ? ` ${styles.leafSelected}` : '')}
       onClick={(e) => { e.stopPropagation(); cb.onSelect(block.id); }}
     >
       {handles()}

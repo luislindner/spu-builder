@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
-import type { Block } from '../../types/ds';
+import type { Block, NS } from '../../types/ds';
 import styles from './TableEditor.module.css';
 
 interface Props {
+  ns: NS;
   block: Block;
   onPatch: (patch: Record<string, unknown>) => void;
 }
@@ -10,8 +11,10 @@ interface Props {
 interface Column { key: string; label: string; align?: string }
 type Row = Record<string, string>;
 
-export function TableEditor({ block, onPatch }: Props) {
+export function TableEditor({ ns, block, onPatch }: Props) {
   const props = block.props || {};
+  const columns = (props.columns as Column[]) || [];
+  const rows = (props.rows as Row[]) || [];
   const [draft, setDraft] = useState(() => tableToText((props.columns as Column[]) || [], (props.rows as Row[]) || []));
 
   const applyFormat = (patch: Record<string, unknown>) => {
@@ -31,6 +34,18 @@ export function TableEditor({ block, onPatch }: Props) {
     });
   };
 
+  const updateHeader = (index: number, label: string) => {
+    const nextColumns = columns.map((column, columnIndex) => columnIndex === index ? { ...column, label } : column);
+    onPatch({ columns: nextColumns });
+    setDraft(tableToText(nextColumns, rows));
+  };
+
+  const updateCell = (rowIndex: number, key: string, value: string) => {
+    const nextRows = rows.map((row, index) => index === rowIndex ? { ...row, [key]: value } : row);
+    onPatch({ rows: nextRows });
+    setDraft(tableToText(columns, nextRows));
+  };
+
   return (
     <div className={styles.root}>
       <textarea
@@ -45,6 +60,48 @@ export function TableEditor({ block, onPatch }: Props) {
           Recarregar dados
         </button>
       </div>
+      {columns.length > 0 && (
+        <div className={styles.richSection}>
+          <div className={styles.richLabel}>Formatar textos da tabela</div>
+          <div className={styles.richHint}>Selecione um trecho em qualquer célula para aplicar negrito, destaque, cor, link ou termo.</div>
+          <div className={styles.richScroll}>
+            <table className={styles.richTable}>
+              <thead>
+                <tr>
+                  {columns.map((column, index) => (
+                    <th key={column.key}>
+                      <ns.Editable
+                        html={column.label || ''}
+                        single
+                        as="span"
+                        placeholder={`Coluna ${index + 1}`}
+                        onChange={(html) => updateHeader(index, html)}
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {columns.map((column) => (
+                      <td key={column.key}>
+                        <ns.Editable
+                          html={row[column.key] || ''}
+                          single
+                          as="span"
+                          placeholder="Célula vazia"
+                          onChange={(html) => updateCell(rowIndex, column.key, html)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       <div className={styles.grid}>
         <label className={styles.check}>
           <input type="checkbox" checked={!!props.dense} onChange={(e) => applyFormat({ dense: e.target.checked })} />
