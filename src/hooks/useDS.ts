@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { NS } from '../types/ds';
 import { installDSCompat } from '../utils/dsCompat';
+import { installLucideCatalog } from '../utils/lucideCatalog';
 
 let cached: NS | null = null;
 
@@ -10,10 +11,11 @@ export function useDS(): NS | null {
   useEffect(() => {
     if (cached) return;
     let id: ReturnType<typeof setTimeout>;
-    function poll() {
+    async function poll() {
       const ns = window.SPUENAPAprendizagemDesignSystem_f0eeed;
       if (ns && ns.BlockDocument) {
         installDSCompat(ns);
+        await installLucideCatalog(ns);
         cached = ns;
         setNs(ns);
       } else {

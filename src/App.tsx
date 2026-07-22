@@ -11,8 +11,6 @@ import {
 import { useDS } from './hooks/useDS';
 import {
   docReducer,
-  undo,
-  redo,
   findBlock,
   findParentBlock,
   findBlockIndex,
@@ -26,6 +24,7 @@ import { Toolbar } from './components/Toolbar/Toolbar';
 import { PreviewModal } from './components/Preview/PreviewModal';
 import { PrintPreviewModal } from './components/PrintPreview/PrintPreviewModal';
 import { QualityPanel } from './components/QualityPanel/QualityPanel';
+import { normalizeProjectContent } from './utils/projectCompat';
 import type { Block } from './types/ds';
 import styles from './App.module.css';
 
@@ -68,12 +67,15 @@ export default function App() {
     past: [], future: [],
   }));
 
+  const handleUndo = useCallback(() => dispatch({ type: 'UNDO' }), []);
+  const handleRedo = useCallback(() => dispatch({ type: 'REDO' }), []);
+
   useEffect(() => {
     if (!ns) return;
     try {
       const saved = localStorage.getItem(AUTOSAVE_KEY);
       if (saved) {
-        const doc = ns.BuilderExport.migrate(JSON.parse(saved));
+        const doc = ns.BuilderExport.migrate(normalizeProjectContent(JSON.parse(saved)));
         dispatch({ type: 'SET_DOC', doc });
         return;
       }
@@ -117,10 +119,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  });
-
-  const handleUndo = useCallback(() => dispatch({ type: 'SET_DOC', doc: undo(state).doc }), [state]);
-  const handleRedo = useCallback(() => dispatch({ type: 'SET_DOC', doc: redo(state).doc }), [state]);
+  }, [handleUndo, handleRedo]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -306,6 +305,16 @@ export default function App() {
 
   const handlePatch = (id: string, patch: Record<string, unknown>) => dispatch({ type: 'PATCH', id, patch });
   const handleInlineEdit = (edited: Block, patch: Record<string, unknown>) => dispatch({ type: 'PATCH', id: edited.id, patch });
+  const handleInsertAt = (parentId: string | null, index: number, type: string) => {
+    if (!ns) return;
+    const allowed = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
+    if (!allowed.includes(type)) return;
+    const block = ns.BlockRegistry.newBlock(type);
+    if (!block) return;
+    if (parentId) dispatch({ type: 'ADD_CHILD_AT', parentId, index, block });
+    else dispatch({ type: 'ADD_TOP_AT', index, block });
+    setSelectedId(block.id);
+  };
   const handleClearDoc = () => {
     if (!ns) return;
     dispatch({ type: 'SET_DOC', doc: ns.BuilderExport.newDoc({ title: state.doc.meta.title || 'Rascunho' }) });
@@ -333,7 +342,7 @@ export default function App() {
           onOpenDoc={(d) => { dispatch({ type: 'SET_DOC', doc: d }); setSelectedId(null); }}
           onPreview={() => setPreviewing(true)}
           onPrintPreview={() => setPrintPreviewing(true)}
-          onTocChange={(patch) => dispatch({ type: 'SYNC_META', patch })}
+          onMetaChange={(patch) => dispatch({ type: 'SYNC_META', patch })}
           onClearDoc={handleClearDoc}
         />
         <div className={styles.workspace}>
@@ -348,6 +357,7 @@ export default function App() {
             onDuplicate={(id) => dispatch({ type: 'DUPLICATE', id })}
             onMove={handleMove}
             onInlineEdit={handleInlineEdit}
+            onInsert={handleInsertAt}
           />
           <div className={styles.rightRail}>
             <Inspector

@@ -8,7 +8,7 @@ import App from './App.tsx'
 ;(window as unknown as Record<string, unknown>).ReactDOM = ReactDOM
 
 // ── Persistência de <image-slot> no builder ──────────────────────────────
-// O image-slot.js persiste via window.omelette.writeFile (sidecar .json) e
+// O image-slot embutido no bundle persiste via window.omelette.writeFile (sidecar .json) e
 // reidrata via fetch(STATE_FILE). No builder não há host omelette → fazemos
 // um shim em localStorage e interceptamos o fetch do sidecar.
 const SLOT_FILE = '.image-slots.state.json'
@@ -43,9 +43,7 @@ function loadScript(src: string) {
   })
 }
 
-loadScript(`${DS_BASE}_ds_bundle.js`)
-  .then(() => loadScript(`${DS_BASE}image-slot.js`))
-  .catch(console.error)
+loadScript(`${DS_BASE}_ds_bundle.js`).catch(console.error)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

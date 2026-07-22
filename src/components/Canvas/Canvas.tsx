@@ -4,6 +4,7 @@ import { SortableContext, verticalListSortingStrategy, rectSortingStrategy, useS
 import { CSS } from '@dnd-kit/utilities';
 import type { NS, Block, BlockDef, FieldDef } from '../../types/ds';
 import styles from './Canvas.module.css';
+import { InsertBlockButton } from './InsertBlockButton';
 
 export interface DropTarget {
   parentId: string | null;
@@ -19,15 +20,25 @@ interface NodeCallbacks {
   onDuplicate: (id: string) => void;
   onMove: (id: string, dir: 'up' | 'down') => void;
   onInlineEdit: (block: Block, patch: Record<string, unknown>) => void;
+  onInsert: (parentId: string | null, index: number, type: string) => void;
 }
 
 // Um nó da árvore: container (Section/Columns via componente real do DS) ou
 // folha (BlockView mode="edit"). Recursivo → containers podem aninhar.
-function BlockNode({ block, index, count, ...cb }: NodeCallbacks & { block: Block; index: number; count: number }) {
+function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { block: Block; index: number; count: number; parentId: string | null }) {
   const { ns, selectedId } = cb;
   const def: BlockDef | undefined = ns.BlockRegistry.byType[block.type];
   const isContainer = def?.kind === 'container';
   const isSelected = selectedId === block.id;
+  const insertTypes = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
+  const insertAfter = (
+    <InsertBlockButton
+      ns={ns}
+      allowedTypes={insertTypes}
+      spacing={block.type === 'kicker' ? 'tight' : block.type === 'titulo' ? 'title' : 'default'}
+      onInsert={(type) => cb.onInsert(parentId, index + 1, type)}
+    />
+  );
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const style: React.CSSProperties = {
@@ -56,11 +67,14 @@ function BlockNode({ block, index, count, ...cb }: NodeCallbacks & { block: Bloc
       <div
         ref={setNodeRef}
         style={style}
+        data-block-id={block.id}
+        data-block-type={block.type}
         className={styles.containerWrap + (isSelected ? ` ${styles.containerSelected}` : '')}
         onClick={(e) => { e.stopPropagation(); cb.onSelect(block.id); }}
       >
         {handles(def.label)}
         <ContainerBody block={block} def={def} {...cb} />
+        {insertAfter}
       </div>
     );
   }
@@ -71,7 +85,9 @@ function BlockNode({ block, index, count, ...cb }: NodeCallbacks & { block: Bloc
     <div
       ref={setNodeRef}
       style={style}
-      className={styles.leafWrap + (isSelected ? ` ${styles.leafSelected}` : '')}
+      data-block-id={block.id}
+      data-block-type={block.type}
+      className={styles.leafWrap + (block.type === 'kicker' ? ` ${styles.leafCompactAfter}` : '') + (isSelected ? ` ${styles.leafSelected}` : '')}
       onClick={(e) => { e.stopPropagation(); cb.onSelect(block.id); }}
     >
       {handles()}
@@ -81,6 +97,7 @@ function BlockNode({ block, index, count, ...cb }: NodeCallbacks & { block: Bloc
           <HotspotLayer block={block} onPatchMarkers={(markers) => cb.onInlineEdit(block, { markers })} />
         )}
       </div>
+      {insertAfter}
     </div>
   );
 }
@@ -361,6 +378,7 @@ function EditableLeaf({ block, def, ...cb }: NodeCallbacks & { block: Block; def
 
 function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
   const { ns } = cb;
+  const slotRef = React.useRef<HTMLElement | null>(null);
   const props = block.props || {};
   const sizeAliases: Record<string, string> = {
     small: 'sm',
@@ -380,6 +398,32 @@ function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
   const imageTitleKey = Object.prototype.hasOwnProperty.call(props, 'title') ? 'title' : 'label';
   const hasMeta = props.title || props.caption || props.credit || props.label;
 
+  React.useEffect(() => {
+    const slotElement = slotRef.current;
+    if (!slot || !slotElement) return;
+    const syncHeight = () => {
+      const image = slotElement.shadowRoot?.querySelector<HTMLImageElement>('.frame img');
+      if (!image?.src || !image.naturalWidth) {
+        slotElement.style.height = '300px';
+        return;
+      }
+      const width = slotElement.clientWidth || slotElement.offsetWidth || 1;
+      slotElement.style.height = `${Math.round(width * image.naturalHeight / image.naturalWidth)}px`;
+    };
+    const image = slotElement.shadowRoot?.querySelector<HTMLImageElement>('.frame img');
+    image?.addEventListener('load', syncHeight);
+    syncHeight();
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(slotElement);
+    const stateObserver = new MutationObserver(syncHeight);
+    stateObserver.observe(slotElement, { attributes: true, attributeFilter: ['data-filled'] });
+    return () => {
+      image?.removeEventListener('load', syncHeight);
+      observer.disconnect();
+      stateObserver.disconnect();
+    };
+  }, [slot]);
+
   const field = (key: string, placeholder: string) => (
     <ns.Editable
       html={typeof props[key] === 'string' ? props[key] as string : ''}
@@ -395,6 +439,7 @@ function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
       <div className="spu-figure__frame" style={{ cursor: 'default' }}>
         {slot ? (
           React.createElement('image-slot', {
+            ref: slotRef,
             id: slot,
             shape: 'rect',
             fit,
@@ -439,6 +484,11 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
         <ns.Icon name="plus" size={16} />
         <span>Arraste um bloco aqui</span>
         <span className={styles.hint}>Aceita: {childTypes.join(', ')}</span>
+        <InsertBlockButton
+          ns={ns}
+          allowedTypes={childTypes}
+          onInsert={(type) => cb.onInsert(block.id, 0, type)}
+        />
       </div>
     </>
   ) : (
@@ -446,7 +496,7 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
       {children.map((c, i) => (
         <React.Fragment key={c.id}>
           {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === i && <DropIndicator />}
-          <BlockNode block={c} index={i} count={children.length} {...cb} />
+          <BlockNode block={c} index={i} count={children.length} parentId={block.id} {...cb} />
         </React.Fragment>
       ))}
       {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === children.length && <DropIndicator />}
@@ -475,9 +525,10 @@ interface CanvasProps {
   onDuplicate: (id: string) => void;
   onMove: (id: string, dir: 'up' | 'down') => void;
   onInlineEdit: (block: Block, patch: Record<string, unknown>) => void;
+  onInsert: (parentId: string | null, index: number, type: string) => void;
 }
 
-export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove, onDuplicate, onMove, onInlineEdit }: CanvasProps) {
+export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove, onDuplicate, onMove, onInlineEdit, onInsert }: CanvasProps) {
   const { setNodeRef } = useDroppable({ id: 'canvas' });
 
   return (
@@ -501,6 +552,7 @@ export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove,
               block={block}
               index={i}
               count={blocks.length}
+              parentId={null}
               ns={ns}
               selectedId={selectedId}
               dropTarget={dropTarget}
@@ -509,6 +561,7 @@ export function Canvas({ ns, blocks, selectedId, dropTarget, onSelect, onRemove,
               onDuplicate={onDuplicate}
               onMove={onMove}
               onInlineEdit={onInlineEdit}
+              onInsert={onInsert}
             />
           </React.Fragment>
         ))}

@@ -26,10 +26,10 @@ export function validateDoc(doc: Doc): DocIssue[] {
   walk(doc.blocks, (block) => {
     const props = block.props || {};
 
-    for (const [key, value] of Object.entries(props)) {
-      if ((key === 'slot' || key.endsWith('Slot')) && typeof value === 'string' && value && !slotHasImage(slots, value)) {
+    for (const { path, value } of collectSlotRefs(props)) {
+      if (value && !slotHasImage(slots, value)) {
         issues.push({
-          id: `${block.id}:${key}:slot`,
+          id: `${block.id}:${path}:slot`,
           blockId: block.id,
           level: 'info',
           text: `Imagem pendente em ${blockLabel(block)}.`,
@@ -69,6 +69,21 @@ export function validateDoc(doc: Doc): DocIssue[] {
   });
 
   return issues.slice(0, 12);
+}
+
+function collectSlotRefs(value: unknown, path: Array<string | number> = []): Array<{ path: string; value: string }> {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => collectSlotRefs(item, [...path, index]));
+  }
+  if (!isObj(value)) return [];
+
+  return Object.entries(value).flatMap(([key, current]) => {
+    const nextPath = [...path, key];
+    if ((key === 'slot' || key.endsWith('Slot')) && typeof current === 'string') {
+      return [{ path: nextPath.join('.'), value: current }];
+    }
+    return collectSlotRefs(current, nextPath);
+  });
 }
 
 function walk(blocks: Block[], visit: (block: Block) => void) {

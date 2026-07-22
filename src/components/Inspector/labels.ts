@@ -3,7 +3,8 @@
 // Valores de token/opção (largura, superfície, tom, nível…).
 export const LABELS: Record<string, string> = {
   narrow: 'Estreita', content: 'Conteúdo', wide: 'Larga', full: 'Total',
-  none: 'Nenhuma', page: 'Papel', warm: 'Quente', dark: 'Escura',
+  none: 'Nenhuma', page: 'Papel', white: 'Branca', warm: 'Quente', dark: 'Escura',
+  'terra-dark': 'Terracota escura',
   lg: 'Amplo', md: 'Médio',
   info: 'Informação', attention: 'Atenção', warning: 'Alerta',
   success: 'Sucesso', note: 'Nota', neutral: 'Neutro',
@@ -30,7 +31,7 @@ export const FIELD_LABELS: Record<string, string> = {
   columns: 'Colunas', card: 'Em cartão', numbered: 'Numerado',
   variant: 'Variante', provider: 'Fonte', url: 'URL', type: 'Tipo',
   // listas e itens
-  items: 'Itens', stats: 'Dados', questions: 'Questões', prompts: 'Perguntas',
+  items: 'Itens', slides: 'Slides', stats: 'Dados', questions: 'Questões', prompts: 'Perguntas',
   options: 'Alternativas', milestones: 'Marcos', eras: 'Períodos',
   credits: 'Créditos', license: 'Licença',
   licenseKind: 'Tipo de licença',

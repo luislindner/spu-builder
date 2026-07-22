@@ -709,6 +709,7 @@ const BLOCKS = [
   stack: false,
   props: {
     count: 2,
+    ratio: 'equal',
     gap: 'lg',
     children: []
   },
@@ -725,6 +726,20 @@ const BLOCKS = [
     }, {
       value: 4,
       label: '4'
+    }]
+  }, {
+    key: 'ratio',
+    label: 'Proporção',
+    type: 'select',
+    options: [{
+      value: 'equal',
+      label: 'Iguais'
+    }, {
+      value: 'first-wide',
+      label: 'Primeira em destaque (2×)'
+    }, {
+      value: 'last-wide',
+      label: 'Última em destaque (2×)'
     }]
   }, {
     key: 'gap',
@@ -1169,6 +1184,86 @@ const BLOCKS = [
     title: '',
     caption: 'Legenda da imagem.',
     credit: ''
+  }
+}, {
+  type: 'carousel',
+  component: 'Carousel',
+  label: 'Carrossel de imagens',
+  icon: 'image',
+  cat: 'Mídia',
+  kind: 'list',
+  rich: true,
+  itemsKey: 'slides',
+  itemFields: [{
+    key: 'slot',
+    label: 'Imagem',
+    type: 'slot'
+  }, {
+    key: 'title',
+    label: 'Título',
+    type: 'rich',
+    inline: true
+  }, {
+    key: 'caption',
+    label: 'Legenda',
+    type: 'rich',
+    inline: true
+  }, {
+    key: 'credit',
+    label: 'Crédito',
+    type: 'rich',
+    inline: true
+  }, {
+    key: 'alt',
+    label: 'Texto alternativo',
+    type: 'text'
+  }],
+  propFields: [{
+    key: 'size',
+    label: 'Largura',
+    type: 'select',
+    options: [{
+      value: 'sm',
+      label: 'Pequena'
+    }, {
+      value: 'md',
+      label: 'Média'
+    }, {
+      value: 'lg',
+      label: 'Ampla'
+    }, {
+      value: 'full',
+      label: 'Total'
+    }]
+  }, {
+    key: 'fit',
+    label: 'Ajuste da imagem',
+    type: 'select',
+    options: [{
+      value: 'contain',
+      label: 'Mostrar completa'
+    }, {
+      value: 'cover',
+      label: 'Preencher área'
+    }]
+  }],
+  props: {
+    size: 'full',
+    fit: 'contain',
+    zoom: true,
+    slides: [{
+      slot: '',
+      title: 'Título da imagem',
+      caption: 'Legenda da imagem.',
+      credit: '',
+      alt: ''
+    }, {
+      slot: '',
+      title: 'Título da imagem',
+      caption: 'Legenda da imagem.',
+      credit: '',
+      alt: ''
+    }]
   }
 }, {
   type: 'bleedimage',
@@ -1764,6 +1859,7 @@ function newDoc(meta) {
     meta: {
       title: 'Nova unidade',
       lang: 'pt-BR',
+      builderCredit: true,
       ...(meta || {})
     },
     blocks: []
@@ -1848,7 +1944,7 @@ function stats(doc) {
 
 // —— Export standalone: um HTML offline com kit + dados embutidos ——
 // Recebe os textos do kit (bundle JS + CSS do DS) para inlinar; o builder os
-// fornece (lidos do projeto). `extraHead` p/ fontes; `imageSlotJs` opcional.
+// fornece (lidos do projeto). `extraHead` p/ fontes; runtimes React obrigatórios.
 function exportStandaloneHTML(doc, kit) {
   const k = kit || {};
   const d = migrate(doc);
@@ -1857,15 +1953,16 @@ function exportStandaloneHTML(doc, kit) {
   const data = JSON.stringify(d).replace(/</g, '\\u003c');
   const css = k.stylesCss ? `<style>${k.stylesCss}</style>` : k.stylesHref ? `<link rel="stylesheet" href="${k.stylesHref}">` : '';
   const bundle = k.bundleJs ? `<script>${k.bundleJs}</script>` : k.bundleHref ? `<script src="${k.bundleHref}"></script>` : '';
-  const slot = k.imageSlotJs ? `<script>${k.imageSlotJs}</script>` : '';
+  const react = k.reactJs ? `<script>${k.reactJs}</script>` : k.reactHref ? `<script src="${k.reactHref}"></script>` : '';
+  const reactDom = k.reactDomJs ? `<script>${k.reactDomJs}</script>` : k.reactDomHref ? `<script src="${k.reactDomHref}"></script>` : '';
   return `<!DOCTYPE html>
 <html lang="${lang}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
-<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+${react}
+${reactDom}
 ${css}
 ${k.extraHead || ''}
 </head>
@@ -1873,7 +1970,6 @@ ${k.extraHead || ''}
 <div id="root"></div>
 <script id="spu-doc" type="application/json">${data}</script>
 ${bundle}
-${slot}
 <script>
 (function () {
   var doc = JSON.parse(document.getElementById('spu-doc').textContent);
@@ -2311,8 +2407,8 @@ function wrapSelection(tag, attrs, selector) {
 }
 
 // Input flutuante para substituir window.prompt (funciona em sandbox/export/iframe,
-// onde modais nativos são ignorados). Resolve com o valor digitado ou null.
-function inlinePrompt(message, def, savedRange) {
+// onde modais nativos são ignorados). Resolve com a ação escolhida ou null.
+function inlinePrompt(message, def, savedRange, canRemove = false) {
   return new Promise(resolve => {
     const sel = window.getSelection();
     const r = savedRange ? savedRange.getBoundingClientRect() : sel && sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : {
@@ -2321,11 +2417,14 @@ function inlinePrompt(message, def, savedRange) {
     };
     const box = document.createElement('div');
     box.className = 'spu-mtpop';
+    const promptWidth = Math.min(canRemove ? 460 : 330, window.innerWidth - 16);
     box.style.position = 'fixed';
-    box.style.left = Math.min(Math.max(8, r.left), window.innerWidth - 300) + 'px';
-    box.style.top = r.bottom + 8 + 'px';
+    box.style.left = Math.min(Math.max(8, r.left), window.innerWidth - promptWidth - 8) + 'px';
+    box.style.top = Math.min(r.bottom + 8, window.innerHeight - 64) + 'px';
     box.style.transform = 'none';
     box.style.display = 'flex';
+    box.style.flexWrap = 'wrap';
+    box.style.maxWidth = 'calc(100vw - 16px)';
     box.style.gap = '6px';
     const input = document.createElement('input');
     input.type = 'text';
@@ -2333,9 +2432,16 @@ function inlinePrompt(message, def, savedRange) {
     input.value = def || '';
     input.style.cssText = 'border:0;border-radius:7px;padding:7px 9px;font:inherit;font-size:13px;background:rgba(255,255,255,.12);color:#fff;outline:none;width:240px';
     const ok = document.createElement('button');
-    ok.textContent = 'OK';
+    ok.textContent = 'Salvar';
     ok.style.cssText = 'border:0;border-radius:7px;background:var(--color-accent,#c2613a);color:#fff;padding:7px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:600';
     box.append(input, ok);
+    let remove;
+    if (canRemove) {
+      remove = document.createElement('button');
+      remove.textContent = 'Remover termo';
+      remove.style.cssText = 'border:1px solid rgba(255,255,255,.28);border-radius:7px;background:transparent;color:#fff;padding:7px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:600';
+      box.appendChild(remove);
+    }
     document.body.appendChild(box);
     input.focus();
     input.select();
@@ -2347,11 +2453,20 @@ function inlinePrompt(message, def, savedRange) {
     const outside = e => {
       if (!box.contains(e.target)) done(null);
     };
-    ok.onclick = () => done(input.value);
+    ok.onclick = () => done({
+      action: 'save',
+      value: input.value
+    });
+    if (remove) remove.onclick = () => done({
+      action: 'remove'
+    });
     input.onkeydown = e => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        done(input.value);
+        done({
+          action: 'save',
+          value: input.value
+        });
       }
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -2388,17 +2503,42 @@ function applyTerm() {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
   const saved = sel.getRangeAt(0).cloneRange();
-  const word = sel.toString().trim();
+  const host = closestEditable(saved.commonAncestorContainer);
+  if (!host) return;
+  const startEl = saved.startContainer.nodeType === 1 ? saved.startContainer : saved.startContainer.parentElement;
+  const endEl = saved.endContainer.nodeType === 1 ? saved.endContainer : saved.endContainer.parentElement;
+  const startTerm = startEl && startEl.closest('span[data-term]');
+  const endTerm = endEl && endEl.closest('span[data-term]');
+  const active = startTerm && startTerm === endTerm && host.contains(startTerm) ? startTerm : null;
+  const word = (active ? active.getAttribute('data-term') || active.textContent : sel.toString()).trim();
   if (!word) return;
+  const currentDefinition = active ? active.getAttribute('title') || active.getAttribute('data-definition') || active.getAttribute('data-def') || '' : '';
   // Input flutuante (sem window.prompt, que é ignorado em preview/iframe sandbox).
-  inlinePrompt('Definição do termo “' + word + '”', '', saved).then(def => {
-    if (def == null || !def.trim()) return;
+  inlinePrompt('Definição do termo “' + word + '”', currentDefinition, saved, !!active).then(result => {
+    if (!result) return;
+    if (result.action === 'remove') {
+      if (active && active.isConnected) {
+        unwrap(active);
+        fireInput(host);
+      }
+      return;
+    }
+    const def = (result.value || '').trim();
+    if (!def) return;
+    if (active && active.isConnected) {
+      active.setAttribute('data-term', word);
+      active.setAttribute('title', def);
+      active.removeAttribute('data-definition');
+      active.removeAttribute('data-def');
+      fireInput(host);
+      return;
+    }
     const s = window.getSelection();
     s.removeAllRanges();
     s.addRange(saved);
     wrapSelection('span', {
       'data-term': word,
-      title: def.trim()
+      title: def
     }, 'span[data-term]');
   });
 }
@@ -3296,7 +3436,7 @@ const BuilderManifest = {
   // Larguras de bloco (Section.width).
   widths: ['narrow', 'content', 'wide', 'full'],
   // Superfícies de bloco (Section.surface).
-  surfaces: ['none', 'page', 'warm', 'dark'],
+  surfaces: ['none', 'page', 'white', 'warm', 'dark', 'terra-dark'],
   // Escala de spacing (gaps/paddings).
   spacing: ['space-2', 'space-4', 'space-6', 'space-8', 'space-12', 'flow-block'],
   // Nomes de ícones disponíveis (mesma lista do picker IconGallery).
@@ -3427,13 +3567,30 @@ __ds_scope.injectCss('spu-icongallery-css', `
 .spu-icongallery__search{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--text-muted)}
 .spu-icongallery__search input{flex:1;border:0;outline:none;background:none;font:inherit;font-size:var(--fs-small);color:var(--text-strong)}
 .spu-icongallery__empty{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-faint);padding:var(--space-4) 0;text-align:center}
+.spu-icongallery__status{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);font-family:var(--font-mono);font-size:10px;letter-spacing:.02em;color:var(--text-faint)}
 .spu-icongallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--_ig,84px),1fr));gap:var(--space-2)}
 .spu-icongallery__item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--text-strong);cursor:pointer;font:inherit;transition:border-color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out)}
 .spu-icongallery__item:hover{border-color:var(--color-primary);background:var(--color-primary-soft)}
 .spu-icongallery__item.is-active{border-color:var(--color-primary);background:var(--color-primary-soft);color:var(--color-primary-strong);box-shadow:var(--focus-ring)}
 .spu-icongallery__name{font-family:var(--font-mono);font-size:10px;letter-spacing:.02em;color:var(--text-faint);text-align:center;word-break:break-word;line-height:1.25}
 .spu-icongallery__item.is-active .spu-icongallery__name{color:var(--color-primary-strong)}
+.spu-icongallery__more{align-self:center;padding:8px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:var(--text-muted);cursor:pointer;font:inherit;font-size:var(--fs-caption)}
+.spu-icongallery__more:hover{border-color:var(--color-primary);color:var(--color-primary-strong);background:var(--color-primary-soft)}
 `);
+
+const ICON_QUERY_ALIASES = {
+  ajuda: ['help'], alerta: ['alert', 'warning'], amor: ['heart'], arquivo: ['file'],
+  audio: ['audio', 'sound', 'volume'], calendario: ['calendar'], camera: ['camera'],
+  casa: ['home', 'house'], chave: ['key'], fechar: ['close', 'x'], foto: ['image', 'camera'],
+  grupo: ['users', 'people'], imagem: ['image', 'picture'], informacao: ['info'],
+  livro: ['book'], local: ['map', 'pin'], mapa: ['map'], mensagem: ['message', 'mail'],
+  pessoa: ['user', 'person'], predio: ['building', 'landmark'], relogio: ['clock', 'time'],
+  seta: ['arrow', 'chevron'], telefone: ['phone'], usuario: ['user'], video: ['video', 'play']
+};
+
+function normalizeIconSearch(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[-_]+/g, ' ').trim();
+}
 
 // Grade visual de todos os ícones do DS — picker pronto para o builder.
 // onPick(name) é chamado ao clicar; `value` marca o ícone selecionado.
@@ -3450,9 +3607,19 @@ function IconGallery({
   style
 }) {
   const [q, setQ] = React.useState('');
-  const term = (filter != null ? String(filter) : q).trim().toLowerCase();
-  let list = names || __ds_scope.ICON_NAMES;
-  if (term) list = list.filter(n => n.toLowerCase().includes(term));
+  const [limit, setLimit] = React.useState(72);
+  const term = normalizeIconSearch(filter != null ? String(filter) : q);
+  React.useEffect(() => setLimit(72), [term]);
+  const source = names || __ds_scope.ICON_NAMES;
+  const searchTerms = __ds_ns.ICON_SEARCH || {};
+  const tokens = term.split(/\s+/).filter(Boolean);
+  let matches = source;
+  if (tokens.length) matches = source.filter(name => {
+    const haystack = normalizeIconSearch(name + ' ' + (searchTerms[name] || []).join(' '));
+    return tokens.every(token => [token, ...(ICON_QUERY_ALIASES[token] || [])].some(candidate => haystack.includes(candidate)));
+  });
+  if (value && matches.includes(value)) matches = [value, ...matches.filter(name => name !== value)];
+  const list = matches.slice(0, limit);
   const grid = React.createElement('div', {
     className: __ds_scope.cx('spu-icongallery', className),
     style: {
@@ -3474,8 +3641,26 @@ function IconGallery({
     className: 'spu-icongallery__name'
   }, name))));
 
-  // Sem busca interna (filtro controlado externamente): devolve só a grade.
-  if (!search || filter != null) return grid;
+  const result = React.createElement(React.Fragment, null,
+    React.createElement('div', {
+      className: 'spu-icongallery__status',
+      role: 'status'
+    }, React.createElement('span', null, matches.length + (matches.length === 1 ? ' ícone' : ' ícones')),
+    matches.length > list.length ? React.createElement('span', null, 'mostrando ' + list.length) : null),
+    matches.length ? grid : React.createElement('div', {
+      className: 'spu-icongallery__empty'
+    }, 'Nenhum ícone para “' + term + '”'),
+    matches.length > list.length ? React.createElement('button', {
+      type: 'button',
+      className: 'spu-icongallery__more',
+      onClick: () => setLimit(current => current + 72)
+    }, 'Mostrar mais') : null
+  );
+
+  // Sem busca interna (filtro controlado externamente): devolve os resultados.
+  if (!search || filter != null) return React.createElement('div', {
+    className: 'spu-icongallery-wrap'
+  }, result);
   return React.createElement('div', {
     className: 'spu-icongallery-wrap'
   }, React.createElement('div', {
@@ -3489,9 +3674,7 @@ function IconGallery({
     placeholder: 'Buscar ícone…',
     onChange: e => setQ(e.target.value),
     'aria-label': 'Buscar ícone'
-  })), list.length ? grid : React.createElement('div', {
-    className: 'spu-icongallery__empty'
-  }, 'Nenhum ícone para “' + term + '”'));
+  })), result);
 }
 Object.assign(__ds_scope, { IconGallery });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/IconGallery.jsx", error: String((e && e.message) || e) }); }
@@ -3500,6 +3683,7 @@ Object.assign(__ds_scope, { IconGallery });
 try { (() => {
 __ds_scope.injectCss('spu-kicker-css', `
 .spu-kicker{display:inline-flex;align-items:center;gap:.55em;font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:500;letter-spacing:var(--ls-eyebrow);text-transform:uppercase;color:var(--color-primary-strong)}
+.spu-blockstack>.spu-block-kicker:not(:last-child){margin-bottom:calc(-1 * var(--flow-block) + var(--space-2))}
 .spu-kicker__rule{width:1.8em;height:2px;background:var(--color-accent);border-radius:2px}
 `);
 function Kicker({
@@ -3577,33 +3761,63 @@ Object.assign(__ds_scope, { Tag });
 // components/interactive/Carousel.jsx
 try { (() => {
 __ds_scope.injectCss('spu-carousel-css', `
-.spu-carousel__viewport{overflow:hidden;border-radius:var(--radius-md)}
+.spu-carousel{position:relative}
+.spu-carousel__viewport{position:relative;overflow:hidden;border-radius:var(--radius-md)}
 .spu-carousel__track{display:flex;transition:transform var(--dur-slow) var(--ease-in-out)}
 .spu-carousel__slide{flex:0 0 100%;min-width:0}
-.spu-carousel__nav{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-top:var(--space-4)}
+.spu-carousel__slide>.spu-figure{margin-block:0}
+.spu-carousel__arrow{position:absolute;z-index:3;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.45);border-radius:var(--radius-pill);background:rgba(14,46,43,.78);color:#fff;box-shadow:var(--shadow-md);cursor:pointer;transition:background var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out)}
+.spu-carousel__arrow:hover{background:var(--color-primary);transform:translateY(-50%) scale(1.04)}
+.spu-carousel__arrow:focus-visible{outline:3px solid var(--color-focus-ring);outline-offset:2px}
+.spu-carousel__arrow--prev{left:var(--space-3)}
+.spu-carousel__arrow--next{right:var(--space-3)}
+.spu-carousel__nav{display:flex;align-items:center;justify-content:center;margin-top:var(--space-4)}
 .spu-carousel__center{display:flex;flex-direction:column;align-items:center;gap:var(--space-2)}
 .spu-carousel__dots{display:flex;align-items:center;gap:var(--space-2)}
 .spu-carousel__dot{width:8px;height:8px;border-radius:var(--radius-pill);background:var(--slate-300);border:0;padding:0;cursor:pointer;transition:width var(--dur) var(--ease-out),background var(--dur) var(--ease-out)}
 .spu-carousel__dot--active{background:var(--color-primary);width:24px}
 .spu-carousel__count{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-muted);text-align:center}
+.spu-carousel--print .spu-carousel__viewport{overflow:visible;border-radius:0}
+.spu-carousel--print .spu-carousel__track{display:block;transform:none !important}
+.spu-carousel--print .spu-carousel__slide{break-inside:avoid;margin-bottom:var(--space-6)}
+.spu-carousel--print .spu-carousel__nav,.spu-carousel--print .spu-carousel__arrow{display:none !important}
 @media print{
   .spu-carousel__viewport{overflow:visible !important;border-radius:0}
   .spu-carousel__track{display:block !important;transform:none !important}
-  .spu-carousel__slide{break-inside:avoid;margin-bottom:var(--space-4)}
-  .spu-carousel__nav{display:none !important}
+  .spu-carousel__slide{break-inside:avoid;margin-bottom:var(--space-6)}
+  .spu-carousel__nav,.spu-carousel__arrow{display:none !important}
 }
 `);
 function Carousel({
   children,
+  slides: slideItems,
+  size = 'full',
+  fit = 'contain',
+  zoom = true,
   className,
   style
 }) {
-  const slides = React.Children.toArray(children);
+  const slides = Array.isArray(slideItems) ? slideItems.map((slide, index) => React.createElement(__ds_scope.Figure, {
+    key: slide.slot || index,
+    slot: slide.slot,
+    src: slide.src,
+    alt: slide.alt || '',
+    title: slide.title,
+    caption: slide.caption,
+    credit: slide.credit,
+    size,
+    fit,
+    zoom
+  })) : React.Children.toArray(children);
   const [i, setI] = React.useState(0);
   const n = slides.length;
+  const printing = __ds_scope.isPrint();
+  React.useEffect(() => {
+    if (i >= n) setI(Math.max(0, n - 1));
+  }, [i, n]);
   const go = d => setI(p => (p + d + n) % n);
   return React.createElement('div', {
-    className: __ds_scope.cx('spu-carousel', className),
+    className: __ds_scope.cx('spu-carousel', printing && 'spu-carousel--print', className),
     style
   }, React.createElement('div', {
     className: 'spu-carousel__viewport'
@@ -3615,15 +3829,26 @@ function Carousel({
   }, slides.map((s, k) => React.createElement('div', {
     key: k,
     className: 'spu-carousel__slide',
-    'aria-hidden': k !== i
-  }, s)))), n > 1 && React.createElement('div', {
-    className: 'spu-carousel__nav'
-  }, React.createElement(__ds_scope.IconButton, {
+    'aria-hidden': printing ? undefined : k !== i
+  }, s))), !printing && n > 1 && React.createElement(React.Fragment, null, React.createElement('button', {
+    type: 'button',
+    className: 'spu-carousel__arrow spu-carousel__arrow--prev',
+    onClick: () => go(-1),
+    'aria-label': 'Imagem anterior'
+  }, React.createElement(__ds_scope.Icon, {
     name: 'chevron-left',
-    label: 'Anterior',
-    size: 'sm',
-    onClick: () => go(-1)
-  }), React.createElement('div', {
+    size: 24
+  })), React.createElement('button', {
+    type: 'button',
+    className: 'spu-carousel__arrow spu-carousel__arrow--next',
+    onClick: () => go(1),
+    'aria-label': 'Próxima imagem'
+  }, React.createElement(__ds_scope.Icon, {
+    name: 'chevron-right',
+    size: 24
+  })))), !printing && n > 1 && React.createElement('div', {
+    className: 'spu-carousel__nav'
+  }, React.createElement('div', {
     className: 'spu-carousel__center'
   }, React.createElement('div', {
     className: 'spu-carousel__dots'
@@ -3635,12 +3860,7 @@ function Carousel({
     'aria-label': `Ir para ${k + 1}`
   }))), React.createElement('div', {
     className: 'spu-carousel__count'
-  }, `${i + 1} / ${n}`)), React.createElement(__ds_scope.IconButton, {
-    name: 'chevron-right',
-    label: 'Próximo',
-    size: 'sm',
-    onClick: () => go(1)
-  })));
+  }, `${i + 1} / ${n}`))));
 }
 Object.assign(__ds_scope, { Carousel });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/interactive/Carousel.jsx", error: String((e && e.message) || e) }); }
@@ -3651,8 +3871,9 @@ __ds_scope.injectCss('spu-gloss-css', `
 .spu-gloss{position:relative;display:inline-block}
 .spu-gloss__trigger{font:inherit;color:var(--color-primary-strong);font-weight:600;border:0;background:none;padding:0;cursor:help;border-bottom:2px dotted var(--petrol-300);transition:border-color var(--dur-fast) var(--ease-out),color var(--dur-fast)}
 .spu-gloss__trigger:hover,.spu-gloss--open .spu-gloss__trigger{color:var(--color-accent-strong);border-bottom-color:var(--color-accent)}
-.spu-gloss__pop{position:absolute;z-index:30;bottom:calc(100% + 10px);left:0;width:max-content;max-width:min(320px,78vw);background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:var(--space-4);text-align:left;cursor:auto;animation:spu-pop var(--dur-fast) var(--ease-out)}
-.spu-gloss__pop::after{content:"";position:absolute;top:100%;left:18px;width:11px;height:11px;background:var(--color-surface);border-right:1px solid var(--color-border);border-bottom:1px solid var(--color-border);transform:translateY(-50%) rotate(45deg)}
+.spu-gloss__pop{position:fixed;z-index:10050;width:max-content;max-width:min(320px,calc(100vw - 24px));background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:var(--space-4);text-align:left;cursor:auto;animation:spu-pop var(--dur-fast) var(--ease-out)}
+.spu-gloss__pop::after{content:"";position:absolute;top:100%;left:var(--spu-gloss-arrow,18px);width:11px;height:11px;background:var(--color-surface);border-right:1px solid var(--color-border);border-bottom:1px solid var(--color-border);transform:translate(-50%,-50%) rotate(45deg)}
+.spu-gloss__pop[data-placement="bottom"]::after{top:auto;bottom:100%;transform:translate(-50%,50%) rotate(225deg)}
 .spu-gloss__term{font-family:var(--font-display);font-weight:700;font-size:var(--fs-small);color:var(--text-strong);margin:0 0 .25em}
 .spu-gloss__def{font-size:var(--fs-small);font-weight:400;color:var(--text-body);line-height:1.5;margin:0}
 .spu-gloss__src{display:block;font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-top:var(--space-2)}
@@ -3690,6 +3911,7 @@ function GlossaryTerm({
 }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
+  const triggerRef = React.useRef(null);
 
   // —— Impressão: termo vira nota de rodapé ——
   if (__ds_scope.isPrint()) {
@@ -3714,25 +3936,58 @@ function GlossaryTerm({
       document.removeEventListener('keydown', onKey);
     };
   }, [open]);
+  React.useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const pop = document.createElement('span');
+    pop.className = 'spu-gloss__pop';
+    pop.setAttribute('role', 'tooltip');
+    const popTerm = document.createElement('p');
+    popTerm.className = 'spu-gloss__term';
+    popTerm.textContent = term;
+    const popDef = document.createElement('p');
+    popDef.className = 'spu-gloss__def';
+    popDef.textContent = definition;
+    pop.append(popTerm, popDef);
+    if (source) {
+      const popSource = document.createElement('span');
+      popSource.className = 'spu-gloss__src';
+      popSource.textContent = source;
+      pop.appendChild(popSource);
+    }
+    document.body.appendChild(pop);
+    const place = () => {
+      const r = triggerRef.current.getBoundingClientRect();
+      const width = Math.min(320, window.innerWidth - 24);
+      const left = Math.min(Math.max(12, r.left), window.innerWidth - width - 12);
+      const below = r.top < 150 && window.innerHeight - r.bottom > r.top;
+      const arrow = Math.min(Math.max(18, r.left + r.width / 2 - left), width - 18);
+      pop.style.left = left + 'px';
+      pop.style.width = width + 'px';
+      pop.style.top = below ? r.bottom + 10 + 'px' : 'auto';
+      pop.style.bottom = below ? 'auto' : window.innerHeight - r.top + 10 + 'px';
+      pop.style.setProperty('--spu-gloss-arrow', arrow + 'px');
+      pop.dataset.placement = below ? 'bottom' : 'top';
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+      pop.remove();
+    };
+  }, [open, term, definition, source]);
   return React.createElement('span', {
     className: __ds_scope.cx('spu-gloss', open && 'spu-gloss--open', className),
     style,
     ref
   }, React.createElement('button', {
+    ref: triggerRef,
     type: 'button',
     className: 'spu-gloss__trigger',
     onClick: () => setOpen(o => !o),
     'aria-expanded': open
-  }, children || term), open && React.createElement('span', {
-    className: 'spu-gloss__pop',
-    role: 'tooltip'
-  }, React.createElement('p', {
-    className: 'spu-gloss__term'
-  }, term), React.createElement('p', {
-    className: 'spu-gloss__def'
-  }, definition), source && React.createElement('span', {
-    className: 'spu-gloss__src'
-  }, source)));
+  }, children || term));
 }
 
 // Lista de notas de rodapé (só na impressão). Renderize ao fim do conteúdo.
@@ -4410,7 +4665,24 @@ function PageFooter({
     className: 'spu-pagefooter__license'
   }, children));
 }
-Object.assign(__ds_scope, { PageFooter });
+__ds_scope.injectCss('spu-builder-credit-css', `
+.spu-builder-credit{margin:var(--space-8) 0 0;padding:var(--space-3) var(--gutter) var(--space-4);border-top:1px solid var(--color-border);color:var(--text-faint);font-family:var(--font-body);font-size:11px;line-height:1.45;text-align:center}
+.spu-pagefooter+.spu-builder-credit{margin-top:0}
+.spu-builder-credit a{color:inherit;text-decoration-color:var(--color-border-strong);text-underline-offset:.16em}
+.spu-builder-credit a:hover{color:var(--color-primary-strong)}
+@media print{.spu-builder-credit{break-inside:avoid;margin-top:6mm;padding-block:2.5mm;font-size:8pt}}
+`);
+function BuilderCredit({ className, style }) {
+  return React.createElement('footer', {
+    className: __ds_scope.cx('spu-builder-credit', className),
+    style
+  }, 'Criado com SPU Builder – uma plataforma personalizada de autoria de objetos HTML/SCORM desenvolvida por ', React.createElement('a', {
+    href: 'http://lattes.cnpq.br/6398736649827022',
+    target: '_blank',
+    rel: 'noopener noreferrer'
+  }, 'Luís Henrique Lindner'), ', Dr.');
+}
+Object.assign(__ds_scope, { PageFooter, BuilderCredit });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/PageFooter.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/Panel.jsx
@@ -4693,6 +4965,9 @@ function BlockView({
   const resolved = {
     ...props
   };
+  if (block.type === 'kicker') {
+    resolved.className = __ds_scope.cx(props.className, 'spu-block-kicker');
+  }
   (def.fields || []).forEach(k => {
     if (editing) {
       resolved[k] = fieldNode(k, !BLOCK_LEVEL[k]); // todos os fields viram Editable
@@ -4707,7 +4982,8 @@ function BlockView({
 function BlockDocument({
   doc,
   mode = 'preview',
-  onEdit
+  onEdit,
+  showBuilderCredit = true
 }) {
   const blocks = doc && doc.blocks || [];
   const toc = doc && doc.meta && doc.meta.toc;
@@ -4719,7 +4995,7 @@ function BlockDocument({
     block: b,
     mode,
     onEdit
-  })));
+  })), showBuilderCredit && (!doc || !doc.meta || doc.meta.builderCredit !== false) && React.createElement(__ds_scope.BuilderCredit));
 }
 Object.assign(__ds_scope, { BlockView, BlockDocument });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/core/BlockView.jsx", error: String((e && e.message) || e) }); }
@@ -4755,6 +5031,52 @@ __ds_scope.injectCss('spu-acc-css', `
 }
 `);
 
+function AutoImageSlot({
+  id,
+  alt,
+  placeholder
+}) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const sync = () => {
+      const img = el.shadowRoot && el.shadowRoot.querySelector('.frame img');
+      if (img && img.getAttribute('src') && img.naturalWidth) {
+        const width = el.clientWidth || el.offsetWidth || 1;
+        el.style.height = Math.round(width * img.naturalHeight / img.naturalWidth) + 'px';
+      } else {
+        el.style.height = '160px';
+      }
+    };
+    const image = el.shadowRoot && el.shadowRoot.querySelector('.frame img');
+    if (image) image.addEventListener('load', sync);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+    if (observer) observer.observe(el);
+    const stateObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(sync) : null;
+    if (stateObserver) stateObserver.observe(el, { attributes: true, attributeFilter: ['data-filled'] });
+    sync();
+    return () => {
+      if (image) image.removeEventListener('load', sync);
+      if (observer) observer.disconnect();
+      if (stateObserver) stateObserver.disconnect();
+    };
+  }, [id]);
+  return React.createElement('image-slot', {
+    ref,
+    id,
+    shape: 'rect',
+    fit: 'contain',
+    alt: alt || '',
+    placeholder: placeholder || 'Arraste uma imagem',
+    style: {
+      display: 'block',
+      width: '100%',
+      height: 160
+    }
+  });
+}
+
 // Extras opcionais por item: imagem (image=src ou imageSlot=id) e link
 // (link={href,label,button}). button = 'primary'|'secondary' renderiza como
 // botão do DS; ausente = link sublinhado.
@@ -4767,16 +5089,10 @@ function itemExtras(it, ns) {
       style: {
         margin: 0
       }
-    }, it.imageSlot ? React.createElement('image-slot', {
+    }, it.imageSlot ? React.createElement(AutoImageSlot, {
       id: it.imageSlot,
-      shape: 'rect',
-      fit: 'cover',
-      placeholder: it.imageAlt || 'Arraste uma imagem',
-      style: {
-        display: 'block',
-        width: '100%',
-        minHeight: 160
-      }
+      alt: it.imageAlt,
+      placeholder: it.imageAlt || 'Arraste uma imagem'
     }) : React.createElement('img', {
       src: it.image,
       alt: it.imageAlt || ''
@@ -4910,13 +5226,15 @@ Object.assign(__ds_scope, { CompareAB });
 // components/interactive/Flipcard.jsx
 try { (() => {
 __ds_scope.injectCss('spu-flip-css', `
-.spu-flip{perspective:1400px;background:none;border:0;padding:0;width:100%;font:inherit;text-align:left;cursor:pointer;display:block}
-.spu-flip__inner{position:relative;transition:transform var(--dur-slow) var(--ease-in-out),filter var(--dur) var(--ease-out);transform-style:preserve-3d}
-.spu-flip:hover .spu-flip__inner{filter:brightness(1.02)}
+.spu-flip{perspective:1400px;background:none;border:0;padding:0;width:100%;font:inherit;text-align:left;cursor:pointer;display:block;isolation:isolate}
+.spu-flip__inner{position:relative;transition:transform var(--dur-slow) var(--ease-in-out);transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
 .spu-flip--flipped .spu-flip__inner{transform:rotateY(180deg)}
-.spu-flip__face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--radius-lg);padding:var(--space-6);display:flex;flex-direction:column;border:1px solid var(--color-border);box-shadow:var(--shadow-sm);overflow:hidden}
-.spu-flip__face--front{background:var(--color-surface)}
-.spu-flip__face--back{background:var(--color-primary);color:var(--text-on-dark);transform:rotateY(180deg);border-color:transparent}
+.spu-flip__face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:var(--radius-lg);padding:var(--space-6);display:flex;flex-direction:column;border:1px solid var(--color-border);box-shadow:var(--shadow-sm);overflow:hidden;transform:translateZ(1px);transition:box-shadow var(--dur) var(--ease-out)}
+.spu-flip:hover .spu-flip__face{box-shadow:var(--shadow-md)}
+.spu-flip__face--front{background:var(--color-surface);opacity:1}
+.spu-flip__face--back{background:var(--color-primary);color:var(--text-on-dark);transform:rotateY(180deg) translateZ(1px);border-color:transparent;opacity:0}
+.spu-flip--flipped .spu-flip__face--front{opacity:0}
+.spu-flip--flipped .spu-flip__face--back{opacity:1}
 .spu-flip__face--back .spu-flip__term{color:#fff}
 .spu-flip__hint{position:absolute;top:var(--space-4);right:var(--space-4);color:var(--text-faint)}
 .spu-flip__face--back .spu-flip__hint{color:var(--text-on-dark-muted)}
@@ -4929,13 +5247,14 @@ __ds_scope.injectCss('spu-flip-css', `
 @media print{
   .spu-flip{cursor:auto;break-inside:avoid}
   .spu-flip__inner{transform:none !important;min-height:0 !important}
-  .spu-flip__face{position:static !important;transform:none !important;backface-visibility:visible !important;-webkit-backface-visibility:visible !important;box-shadow:none}
+  .spu-flip__face{position:static !important;transform:none !important;backface-visibility:visible !important;-webkit-backface-visibility:visible !important;box-shadow:none;opacity:1 !important}
   .spu-flip__face--front{border-radius:var(--radius-lg) var(--radius-lg) 0 0;border-bottom:0}
   .spu-flip__face--back{border-radius:0 0 var(--radius-lg) var(--radius-lg)}
   .spu-flip__hint,.spu-flip__cue{display:none !important}
 }
 @media (prefers-reduced-motion: reduce){
-  .spu-flip__inner{transition:none;transform:none !important;filter:none}
+  .spu-flip__inner{transition:none}
+  .spu-flip__face{transition:none}
 }
 `);
 function Flipcard({
@@ -5355,10 +5674,11 @@ Object.assign(__ds_scope, { Timeline });
 // components/layout/Columns.jsx
 try { (() => {
 __ds_scope.injectCss('spu-columns-css', `
-.spu-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(var(--_cmin,260px),100%),1fr))}
+.spu-columns{display:grid;grid-template-columns:var(--_columns-template,repeat(auto-fit,minmax(min(var(--_cmin,260px),100%),1fr)))}
 .spu-columns > *{margin-top:0 !important;align-self:start}
 .spu-columns > * > :first-child,
 .spu-columns .spu-blockstack > :first-child{margin-top:0 !important}
+@media (max-width:680px){.spu-columns{grid-template-columns:1fr}}
 `);
 const GAPS = {
   none: '0',
@@ -5370,18 +5690,27 @@ const GAPS = {
 // Dispõe blocos lado a lado em grade responsiva (quebra sozinho em telas estreitas).
 function Columns({
   count = 2,
+  ratio = 'equal',
   gap = 'lg',
   minItem,
   children,
   className,
   style
 }) {
-  const min = minItem || (count >= 4 ? 200 : count === 3 ? 240 : 300);
+  const columnCount = Math.max(1, Number(count) || 1);
+  const min = minItem || (columnCount >= 4 ? 200 : columnCount === 3 ? 240 : 300);
+  let template;
+  if (ratio === 'first-wide') {
+    template = Array.from({ length: columnCount }, (_, index) => `minmax(0,${index === 0 ? 2 : 1}fr)`).join(' ');
+  } else if (ratio === 'last-wide') {
+    template = Array.from({ length: columnCount }, (_, index) => `minmax(0,${index === columnCount - 1 ? 2 : 1}fr)`).join(' ');
+  }
   return React.createElement('div', {
     className: __ds_scope.cx('spu-columns', className),
     style: {
       gap: GAPS[gap] || gap,
       '--_cmin': typeof min === 'number' ? `${min}px` : min,
+      '--_columns-template': template,
       ...style
     }
   }, children);
@@ -5393,9 +5722,12 @@ Object.assign(__ds_scope, { Columns });
 try { (() => {
 __ds_scope.injectCss('spu-section-css', `
 .spu-section{width:100%;box-sizing:border-box}
-/* Título de seção: cola mais no bloco seguinte (a pilha usa gap --flow-block,
-   amplo demais logo após um título). Puxa o próximo bloco para ~--space-4. */
-.spu-block-title{margin:0 0 calc(-1 * var(--flow-block) + var(--space-4)) 0}
+/* Dentro da pilha, o gap é a única fonte de distância entre blocos. Alguns
+   componentes também possuem margem externa para uso avulso; sem este reset,
+   margem + gap se somam e criam vazios exagerados. */
+.spu-blockstack.spu-blockstack>*:not(.spu-block-title):not(.spu-block-kicker){margin-block:0}
+.spu-block-title{margin:0}
+.spu-block-title .spu-richtext{line-height:inherit}
 .spu-section__inner{margin-inline:auto;padding-inline:var(--gutter)}
 .spu-section--narrow .spu-section__inner{max-width:var(--container-prose)}
 .spu-section--content .spu-section__inner{max-width:var(--container-content)}
@@ -5407,7 +5739,9 @@ __ds_scope.injectCss('spu-section-css', `
 /* superfícies */
 .spu-section--warm{background:var(--color-surface-warm);background-image:var(--texture-topo);background-size:420px;border-block:1px solid var(--color-border)}
 .spu-section--dark{background:var(--color-surface-inverse);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark)}
+.spu-section--terra-dark{background:var(--terra-800);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark)}
 .spu-section--page{background:var(--bg-paper)}
+.spu-section--white{background:var(--white)}
 /* —— Faixa escura: remapeia os tokens de texto → todo texto "solto" clareia sozinho —— */
 .spu-section--dark {
   color: var(--text-on-dark);
@@ -5481,7 +5815,7 @@ function Section({
   return React.createElement('section', {
     id,
     'data-screen-label': id,
-    className: __ds_scope.cx('spu-section', `spu-section--${width}`, `spu-section--pad-${pad}`, surface !== 'none' && `spu-section--${surface}`, className),
+    className: __ds_scope.cx('spu-section', `spu-section--${width}`, `spu-section--pad-${pad}`, surface !== 'none' && `spu-section--${surface}`, surface === 'terra-dark' && 'spu-section--dark', className),
     style,
     ...rest
   }, React.createElement('div', {
@@ -5595,6 +5929,7 @@ function BleedImage({
     const sync = () => {
       const img = slotImg(el);
       if (img && img.getAttribute('src')) setZoomSrc(img.getAttribute('src'));
+      else setZoomSrc(null);
       if (isFull && img && img.naturalWidth) {
         const w = el.clientWidth || el.offsetWidth || 1;
         el.style.height = Math.round(w * img.naturalHeight / img.naturalWidth) + 'px';
@@ -5602,9 +5937,18 @@ function BleedImage({
         el.style.height = cssHeight || '46vh';
       }
     };
-    const t = setInterval(sync, 600);
+    const img = el.shadowRoot && el.shadowRoot.querySelector('.frame img');
+    if (img) img.addEventListener('load', sync);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+    if (observer) observer.observe(el);
+    const stateObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(sync) : null;
+    if (stateObserver) stateObserver.observe(el, { attributes: true, attributeFilter: ['data-filled'] });
     sync();
-    return () => clearInterval(t);
+    return () => {
+      if (img) img.removeEventListener('load', sync);
+      if (observer) observer.disconnect();
+      if (stateObserver) stateObserver.disconnect();
+    };
   }, [slot, isFull, cssHeight]);
   React.useEffect(() => {
     if (!open) return undefined;
@@ -5721,10 +6065,10 @@ __ds_scope.injectCss('spu-ph-css', `
 `);
 __ds_scope.injectCss('spu-figure-css', `
 .spu-figure{margin:var(--flow-block) 0}
-.spu-figure--sm{max-width:340px;margin-inline:auto}
-.spu-figure--md{max-width:560px;margin-inline:auto}
-.spu-figure--lg{max-width:820px;margin-inline:auto}
-.spu-figure--full{max-width:100%}
+.spu-figure--sm{width:min(100%,340px);margin-inline:auto}
+.spu-figure--md{width:min(100%,560px);margin-inline:auto}
+.spu-figure--lg{width:min(100%,820px);margin-inline:auto}
+.spu-figure--full{width:100%}
 .spu-figure__frame{position:relative;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-border);background:var(--color-surface-warm);display:block;width:100%;padding:0;cursor:zoom-in;font:inherit}
 .spu-figure__frame img{width:100%;display:block}
 .spu-figure__frame > image-slot{display:block;width:100% !important;max-width:100% !important;min-width:100% !important}
@@ -5794,11 +6138,21 @@ function Figure({
       } else {
         el.style.height = '300px';
         el.removeAttribute('data-has-img');
+        setZoomSrc(null);
       }
     };
-    const t = setInterval(sync, 600);
+    const img = el.shadowRoot && el.shadowRoot.querySelector('.frame img');
+    if (img) img.addEventListener('load', sync);
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(sync) : null;
+    if (observer) observer.observe(el);
+    const stateObserver = typeof MutationObserver !== 'undefined' ? new MutationObserver(sync) : null;
+    if (stateObserver) stateObserver.observe(el, { attributes: true, attributeFilter: ['data-filled'] });
     sync();
-    return () => clearInterval(t);
+    return () => {
+      if (img) img.removeEventListener('load', sync);
+      if (observer) observer.disconnect();
+      if (stateObserver) stateObserver.disconnect();
+    };
   }, [slot]);
   React.useEffect(() => {
     if (!open) return undefined;
@@ -7971,6 +8325,8 @@ __ds_ns.Masthead = __ds_scope.Masthead;
 __ds_ns.MediaEmbed = __ds_scope.MediaEmbed;
 
 __ds_ns.PageFooter = __ds_scope.PageFooter;
+
+__ds_ns.BuilderCredit = __ds_scope.BuilderCredit;
 
 __ds_ns.PageToc = __ds_scope.PageToc;
 

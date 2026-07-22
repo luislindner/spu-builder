@@ -200,6 +200,7 @@ function itemNoun(key?: string): string {
     case 'eras': return 'Período';
     case 'prompts': return 'Pergunta';
     case 'credits': return 'Crédito';
+    case 'slides': return 'Slide';
     case 'items': return 'Item';
     default: return 'Item';
   }

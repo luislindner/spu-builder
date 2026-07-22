@@ -45,6 +45,7 @@ export interface TocItem { id: string; text: string; hidden?: boolean }
 export interface DocMeta {
   title: string;
   lang: string;
+  builderCredit?: boolean;
   toc?: { enabled?: boolean; title?: string; items?: TocItem[] };
 }
 
@@ -76,7 +77,7 @@ export interface BuilderManifestType {
   textColors: string[];   // ['petrol','terra','ochre','green','muted']
   fontRoles: FontRole[];
   widths: string[];       // ['narrow','content','wide','full']
-  surfaces: string[];     // ['none','page','warm','dark']
+  surfaces: string[];     // ['none','page','white','warm','dark','terra-dark']
   spacing: string[];
   icons: string[];
 }
@@ -107,7 +108,7 @@ export interface BuilderExportType {
 }
 
 export interface NS {
-  BlockDocument: React.ComponentType<{ doc: Doc; mode?: 'preview' | 'edit' }>;
+  BlockDocument: React.ComponentType<{ doc: Doc; mode?: 'preview' | 'edit'; showBuilderCredit?: boolean }>;
   BlockView: React.ComponentType<{ block: Block; mode?: 'preview' | 'edit'; onEdit?: (block: Block, patch: Record<string, unknown>) => void }>;
   BlockRegistry: BlockRegistryType;
   BuilderManifest: BuilderManifestType;
@@ -117,7 +118,9 @@ export interface NS {
   MarkToolbar: React.ComponentType<Record<string, never>>;
   IconGallery: React.ComponentType<{ value?: string; onPick: (name: string) => void; filter?: string; itemMin?: number; size?: number }>;
   Icon: React.ComponentType<{ name: string; size?: number }>;
+  ICONS: Record<string, string>;
   ICON_NAMES: string[];
+  ICON_SEARCH?: Record<string, string[]>;
   SPU_MARKS: unknown;
   // Componentes do DS acessíveis por nome (Section, Hero, Callout, …)
   Section: React.ComponentType<Record<string, unknown>>;

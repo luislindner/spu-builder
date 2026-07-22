@@ -10,12 +10,12 @@
 
 import { zipSync, strToU8 } from 'fflate';
 import type { Doc } from '../types/ds';
+import { getDocumentLucideAssets } from './lucideCatalog';
 
 const DS_BASE = `${import.meta.env.BASE_URL}ds/`;
+const VENDOR_BASE = `${import.meta.env.BASE_URL}vendor/`;
 const SLOT_FILE = '.image-slots.state.json';
 const SLOT_KEY = 'spu_image_slots';
-const REACT_URL = 'https://unpkg.com/react@18.3.1/umd/react.production.min.js';
-const REACTDOM_URL = 'https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js';
 const BUILDER_EXPORT_CSS = `
 .spu-figure__frame > image-slot {
   width: 100% !important;
@@ -23,25 +23,25 @@ const BUILDER_EXPORT_CSS = `
   min-width: 100% !important;
 }
 .spu-figure--small,
-.spu-figure--pequena { max-width: 340px; margin-inline: auto; }
+.spu-figure--pequena { width: min(100%, 340px); margin-inline: auto; }
 .spu-figure--medium,
 .spu-figure--medio,
-.spu-figure--media { max-width: 560px; margin-inline: auto; }
+.spu-figure--media { width: min(100%, 560px); margin-inline: auto; }
 .spu-figure--large,
 .spu-figure--wide,
-.spu-figure--ampla { max-width: 820px; margin-inline: auto; }
-.spu-figure--total { max-width: 100%; }
+.spu-figure--ampla { width: min(100%, 820px); margin-inline: auto; }
+.spu-figure--total { width: 100%; }
+.spu-block-title:is(h2) { line-height: 1.06; }
+.spu-block-title .spu-richtext { line-height: inherit; }
 .spu-richtext [data-term] {
   position: relative;
   display: inline-block;
 }
 .spu-term-pop {
-  position: absolute;
-  z-index: 80;
-  bottom: calc(100% + 10px);
-  left: 0;
+  position: fixed;
+  z-index: 10050;
   width: max-content;
-  max-width: min(320px, 78vw);
+  max-width: min(320px, calc(100vw - 24px));
   display: none;
   padding: var(--space-4);
   border: 1px solid var(--color-border);
@@ -53,21 +53,43 @@ const BUILDER_EXPORT_CSS = `
   font-size: var(--fs-small);
   line-height: 1.5;
 }
+.spu-term-pop::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: var(--spu-term-arrow, 18px);
+  width: 11px;
+  height: 11px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.spu-term-pop[data-placement="bottom"]::after {
+  top: auto;
+  bottom: 100%;
+  transform: translate(-50%, 50%) rotate(225deg);
+}
 .spu-term-pop strong {
   display: block;
   margin-bottom: .25em;
   color: var(--text-strong);
   font-family: var(--font-display);
 }
-.spu-term-open .spu-term-pop { display: block; }
+.spu-term-pop.is-open { display: block; }
 `;
 const GLOSSARY_ENHANCER_JS = `
 (function(){
+  var popById = {};
+  var positionById = {};
+  var nextId = 1;
   function closeAll(except){
     document.querySelectorAll('.spu-term-open').forEach(function(el){
       if(el !== except){
         el.classList.remove('spu-term-open');
         el.setAttribute('aria-expanded','false');
+        var pop = popById[el.dataset.spuTermPortalId];
+        if(pop) pop.classList.remove('is-open');
       }
     });
   }
@@ -81,20 +103,39 @@ const GLOSSARY_ENHANCER_JS = `
       el.setAttribute('role','button');
       el.setAttribute('tabindex','0');
       el.setAttribute('aria-expanded','false');
+      el.setAttribute('data-definition',def);
       el.removeAttribute('title');
+      var id = 'spu-term-' + nextId++;
+      el.dataset.spuTermPortalId = id;
       var pop = document.createElement('span');
       pop.className = 'spu-term-pop';
       pop.setAttribute('role','tooltip');
       pop.innerHTML = '<strong></strong><span></span>';
       pop.querySelector('strong').textContent = term;
       pop.querySelector('span').textContent = def;
-      el.appendChild(pop);
+      document.body.appendChild(pop);
+      popById[id] = pop;
+      var position = function(){
+        var rect = el.getBoundingClientRect();
+        var width = Math.min(320, window.innerWidth - 24);
+        var left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+        var below = rect.top < 150 && window.innerHeight - rect.bottom > rect.top;
+        var arrow = Math.min(Math.max(18, rect.left + rect.width / 2 - left), width - 18);
+        pop.style.left = left + 'px';
+        pop.style.width = width + 'px';
+        pop.style.top = below ? rect.bottom + 10 + 'px' : 'auto';
+        pop.style.bottom = below ? 'auto' : window.innerHeight - rect.top + 10 + 'px';
+        pop.style.setProperty('--spu-term-arrow',arrow + 'px');
+        pop.dataset.placement = below ? 'bottom' : 'top';
+      };
+      positionById[id] = position;
       var toggle = function(ev){
         ev.preventDefault();
         ev.stopPropagation();
         var open = el.classList.toggle('spu-term-open');
         el.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if(open) closeAll(el);
+        pop.classList.toggle('is-open',open);
+        if(open){ closeAll(el); position(); }
       };
       el.addEventListener('click', toggle);
       el.addEventListener('keydown', function(ev){
@@ -104,6 +145,14 @@ const GLOSSARY_ENHANCER_JS = `
     });
   }
   document.addEventListener('click', function(){ closeAll(); });
+  function repositionOpen(){
+    document.querySelectorAll('.spu-term-open').forEach(function(el){
+      var position = positionById[el.dataset.spuTermPortalId];
+      if(position) position();
+    });
+  }
+  window.addEventListener('resize',repositionOpen);
+  window.addEventListener('scroll',repositionOpen,true);
   enhance();
   window.__SPU_ENHANCE_GLOSSARY = enhance;
 })();`;
@@ -111,7 +160,7 @@ const DS_COMPAT_JS = `
 (function(){
   window.__SPU_INSTALL_DS_COMPAT = function(NS){
     if(!NS || NS.__spuBuilderCompat) return;
-    var COMPAT_TYPES = ['pagefooter','markerlist','reflexao','mapfigure','statblock','feature','accordion','timeline','quiz','flashcard','compareab'];
+    var COMPAT_TYPES = ['pagefooter','markerlist','reflexao','mapfigure','statblock','feature','accordion','timeline','quiz','flashcard','compareab','carousel'];
     var RICH_ITEM_FIELDS = {
       pagefooter:['role','name'],
       markerlist:['title','text'],
@@ -121,7 +170,8 @@ const DS_COMPAT_JS = `
       feature:['title','text'],
       accordion:['title','content','linkLabel'],
       timeline:['label','period','date','title','content','linkLabel'],
-      quiz:['question','text','feedback']
+      quiz:['question','text','feedback'],
+      carousel:['title','caption','credit']
     };
     var RICH_PROP_FIELDS = {
       flashcard:['term','definition'],
@@ -264,11 +314,13 @@ function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | n
   return { bytes, ext };
 }
 
-async function getReactUMD(): Promise<{ react: string; reactDom: string } | null> {
-  try {
-    const [react, reactDom] = await Promise.all([fetchText(REACT_URL), fetchText(REACTDOM_URL)]);
-    return { react, reactDom };
-  } catch { return null; }
+async function getReactUMD(): Promise<{ react: string; reactDom: string; license: string }> {
+  const [react, reactDom, license] = await Promise.all([
+    fetchText(VENDOR_BASE + 'react.production.min.js'),
+    fetchText(VENDOR_BASE + 'react-dom.production.min.js'),
+    fetchText(VENDOR_BASE + 'REACT_LICENSE.txt'),
+  ]);
+  return { react, reactDom, license };
 }
 
 function escapeHtml(s: string): string {
@@ -291,9 +343,10 @@ interface PageOpts {
   inline: boolean;                 // true = autocontido; false = assets externos
   bundleJs: string;
   stylesCss: string;
-  imageSlotJs: string;
   sidecar: Sidecar;                // já com URLs corretas (data: ou assets/)
-  react: { react: string; reactDom: string } | null;
+  react: { react: string; reactDom: string; license: string };
+  lucideIcons: Record<string, string>;
+  lucideLicense: string;
   scorm?: boolean;
   print?: boolean;
   autoPrint?: boolean;
@@ -304,15 +357,13 @@ function buildPageHtml(o: PageOpts): string {
   const lang = o.doc.meta.lang || 'pt-BR';
   const data = JSON.stringify(o.doc).replace(/</g, '\\u003c');
   const sidecarJson = JSON.stringify(o.sidecar).replace(/</g, '\\u003c');
+  const lucideIconsJson = JSON.stringify(o.lucideIcons).replace(/</g, '\\u003c');
 
-  const reactTags = o.react
-    ? (o.inline
-        ? `<script>${escapeInlineScript(o.react.react)}</script>\n<script>${escapeInlineScript(o.react.reactDom)}</script>`
-        : `<script src="assets/react.js"></script>\n<script src="assets/react-dom.js"></script>`)
-    : `<script src="${REACT_URL}" crossorigin></script>\n<script src="${REACTDOM_URL}" crossorigin></script>`;
+  const reactTags = o.inline
+    ? `<script>${escapeInlineScript(o.react.react)}</script>\n<script>${escapeInlineScript(o.react.reactDom)}</script>`
+    : `<script src="assets/react.js"></script>\n<script src="assets/react-dom.js"></script>`;
 
   const cssTag = o.inline ? `<style>${o.stylesCss}\n${BUILDER_EXPORT_CSS}</style>` : `<link rel="stylesheet" href="assets/styles.css">\n<style>${BUILDER_EXPORT_CSS}</style>`;
-  const slotTag = o.inline ? `<script>${escapeInlineScript(o.imageSlotJs)}</script>` : `<script src="assets/image-slot.js"></script>`;
   const bundleTag = o.inline ? `<script>${escapeInlineScript(o.bundleJs)}</script>` : `<script src="assets/_ds_bundle.js"></script>`;
   const printFlag = o.print ? `<script>window.__SPU_PRINT=true;</script>` : '';
   const printCss = o.print ? `<style>
@@ -353,7 +404,6 @@ body { margin: 0; background: #d8d5cd; }
 .spu-print-shell .spu-acc__media,
 .spu-print-shell .spu-tl__media,
 .spu-print-shell .spu-twi__media { break-inside: avoid; }
-.spu-print-shell .spu-figure__frame,
 .spu-print-shell .spu-map__frame,
 .spu-print-shell .spu-bleedimg__frame,
 .spu-print-shell .spu-reveal,
@@ -362,7 +412,6 @@ body { margin: 0; background: #d8d5cd; }
 .spu-print-shell .spu-acc__media,
 .spu-print-shell .spu-tl__media,
 .spu-print-shell .spu-twi__media { max-height: var(--spu-print-image-max-height) !important; overflow: hidden; }
-.spu-print-shell .spu-figure__frame img,
 .spu-print-shell .spu-map__img,
 .spu-print-shell .spu-bleedimg__frame img,
 .spu-print-shell .spu-reveal img,
@@ -371,7 +420,6 @@ body { margin: 0; background: #d8d5cd; }
 .spu-print-shell .spu-acc__media img,
 .spu-print-shell .spu-tl__media img,
 .spu-print-shell .spu-twi__media img,
-.spu-print-shell .spu-figure__frame > image-slot,
 .spu-print-shell .spu-map__frame image-slot,
 .spu-print-shell .spu-bleedimg__frame image-slot,
 .spu-print-shell .spu-reveal image-slot,
@@ -380,6 +428,14 @@ body { margin: 0; background: #d8d5cd; }
 .spu-print-shell .spu-acc__media image-slot,
 .spu-print-shell .spu-tl__media image-slot,
 .spu-print-shell .spu-twi__media image-slot { max-height: var(--spu-print-image-max-height) !important; object-fit: contain !important; }
+.spu-print-shell .spu-figure__frame { max-height: none !important; overflow: hidden; }
+.spu-print-shell .spu-figure__frame img,
+.spu-print-shell .spu-figure__frame > image-slot { width: 100% !important; max-height: none !important; object-fit: contain !important; }
+.spu-print-shell image-slot:not([data-filled]),
+.spu-print-shell .spu-carousel__slide:has(.spu-figure__frame > image-slot:not([data-filled])),
+.spu-print-shell .spu-figure:has(.spu-figure__frame > image-slot:not([data-filled])),
+.spu-print-shell .spu-acc__media:has(image-slot:not([data-filled])),
+.spu-print-shell .spu-tl__media:has(image-slot:not([data-filled])) { display: none !important; }
 .spu-print-answer-key {
   max-width: var(--container-content);
   margin: var(--space-8) auto 0;
@@ -431,7 +487,9 @@ ${printFlag}
 <div id="root"></div>
 <script id="spu-doc" type="application/json">${data}</script>
 <script id="spu-image-slots" type="application/json">${sidecarJson}</script>
-${slotTag}
+<script id="spu-lucide-icons" type="application/json">${lucideIconsJson}</script>
+<script id="spu-lucide-license" type="text/plain">${escapeInlineScript(o.lucideLicense)}</script>
+<script id="spu-react-license" type="text/plain">${escapeInlineScript(o.react.license)}</script>
 ${bundleTag}
 <script>${escapeInlineScript(DS_COMPAT_JS)}</script>
 <script>
@@ -466,10 +524,18 @@ ${bundleTag}
     if (!NS || !NS.BlockDocument) { if(tries>0) return setTimeout(function(){start(tries-1);},50);
       document.getElementById('root').textContent = 'Kit do design system não carregado.'; return; }
     if (window.__SPU_INSTALL_DS_COMPAT) window.__SPU_INSTALL_DS_COMPAT(NS);
+    var lucideIcons = JSON.parse(document.getElementById('spu-lucide-icons').textContent || '{}');
+    if (NS.ICONS) Object.assign(NS.ICONS, lucideIcons);
+    if (Array.isArray(NS.ICON_NAMES)) Object.keys(lucideIcons).forEach(function(name){
+      if (NS.ICON_NAMES.indexOf(name) < 0) NS.ICON_NAMES.push(name);
+    });
     var doc = JSON.parse(document.getElementById('spu-doc').textContent);
-    var children = [React.createElement(NS.BlockDocument, { key: 'doc', doc: doc, mode: 'preview' })];
+    var children = [React.createElement(NS.BlockDocument, { key: 'doc', doc: doc, mode: 'preview', showBuilderCredit: ${o.print ? 'false' : 'true'} })];
     if (${o.print ? 'true' : 'false'}) {
       children.push(React.createElement(QuizAnswerKey, { key: 'quiz-key', doc: doc }));
+      if ((!doc.meta || doc.meta.builderCredit !== false) && NS.BuilderCredit) {
+        children.push(React.createElement(NS.BuilderCredit, { key: 'builder-credit' }));
+      }
     }
     ReactDOM.createRoot(document.getElementById('root')).render(
       React.createElement('div', { className: ${o.print ? "'spu-print-shell'" : "''"} }, children));
@@ -497,15 +563,14 @@ const safe = (s: string) => (s || 'conteudo').replace(/[^\w-]+/g, '-').replace(/
 
 // ── 1) HTML autocontido ─────────────────────────────────────────────────────
 export async function exportSelfContained(doc: Doc) {
-  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+  const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
-    fetchText(DS_BASE + 'image-slot.js'),
   ]);
   const bundleJs = relaxImageSlot(bundleJsRaw);
-  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
   const react = await getReactUMD();
-  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, imageSlotJs, sidecar: getSidecar(), react });
+  const lucide = await getDocumentLucideAssets(doc);
+  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar: getSidecar(), react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   download(safe(doc.meta.title) + '.html', html, 'text/html;charset=utf-8');
 }
 
@@ -529,27 +594,24 @@ function externalizeImages(files: Record<string, Uint8Array>): Sidecar {
 
 // ── 2) Pacote HTML + assets (.zip) ───────────────────────────────────────────
 export async function exportAssetsZip(doc: Doc) {
-  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+  const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
-    fetchText(DS_BASE + 'image-slot.js'),
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
   const sidecar = externalizeImages(files);
   const bundleJs = relaxImageSlot(bundleJsRaw);
-  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
+  const lucide = await getDocumentLucideAssets(doc);
 
-  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, imageSlotJs, sidecar, react });
+  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   files['index.html'] = strToU8(html);
   files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
   files['assets/_ds_bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
-  files['assets/image-slot.js'] = strToU8(imageSlotJs);
-  if (react) {
-    files['assets/react.js'] = strToU8(react.react);
-    files['assets/react-dom.js'] = strToU8(react.reactDom);
-  }
+  files['assets/react.js'] = strToU8(react.react);
+  files['assets/react-dom.js'] = strToU8(react.reactDom);
+  files['assets/REACT_LICENSE.txt'] = strToU8(react.license);
   download(safe(doc.meta.title) + '-html.zip', zipSync(files), 'application/zip');
 }
 
@@ -596,28 +658,25 @@ const SCORM_API_JS = `(function(){
 })();`;
 
 export async function exportScormZip(doc: Doc) {
-  const [bundleJsRaw, stylesCss, imageSlotJsRaw] = await Promise.all([
+  const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
-    fetchText(DS_BASE + 'image-slot.js'),
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
   const sidecar = externalizeImages(files);
   const bundleJs = relaxImageSlot(bundleJsRaw);
-  const imageSlotJs = relaxImageSlot(imageSlotJsRaw);
+  const lucide = await getDocumentLucideAssets(doc);
 
-  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, imageSlotJs, sidecar, react, scorm: true });
+  const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license, scorm: true });
   files['index.html'] = strToU8(html);
   files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
   files['imsmanifest.xml'] = strToU8(imsmanifest(doc));
   files['scorm-api.js'] = strToU8(SCORM_API_JS);
   files['assets/_ds_bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
-  files['assets/image-slot.js'] = strToU8(imageSlotJs);
-  if (react) {
-    files['assets/react.js'] = strToU8(react.react);
-    files['assets/react-dom.js'] = strToU8(react.reactDom);
-  }
+  files['assets/react.js'] = strToU8(react.react);
+  files['assets/react-dom.js'] = strToU8(react.reactDom);
+  files['assets/REACT_LICENSE.txt'] = strToU8(react.license);
   download(safe(doc.meta.title) + '-scorm.zip', zipSync(files), 'application/zip');
 }
