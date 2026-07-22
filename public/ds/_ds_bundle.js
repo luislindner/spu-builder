@@ -1481,11 +1481,27 @@ const BLOCKS = [
   kind: 'text',
   rich: true,
   fields: ['label', 'title', 'children'],
+  propFields: [{
+    key: 'collapse',
+    label: 'Comportamento',
+    type: 'select',
+    options: [{
+      value: 'none',
+      label: 'Sempre aberto'
+    }, {
+      value: 'open',
+      label: 'Retrátil, inicialmente aberto'
+    }, {
+      value: 'closed',
+      label: 'Retrátil, inicialmente fechado'
+    }]
+  }],
   props: {
     label: 'Exemplo prático',
     icon: 'map-pin',
     color: '',
     slot: '',
+    collapse: 'none',
     title: 'Título do exemplo',
     children: '<p>Descrição do caso.</p>'
   }
@@ -4603,11 +4619,16 @@ __ds_scope.injectCss('spu-examplecard-css', `
 .spu-examplecard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin:var(--flow-block) 0;box-shadow:var(--shadow-sm)}
 .spu-examplecard__hd{display:flex;align-items:center;gap:.55em;padding:.72em 1.1em;background:var(--_ec, var(--color-primary));color:#fff;font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:600;letter-spacing:.1em;text-transform:uppercase;line-height:1.3}
 .spu-examplecard__hd svg{flex:0 0 auto}
+.spu-examplecard__details>.spu-examplecard__hd{cursor:pointer;list-style:none}
+.spu-examplecard__details>.spu-examplecard__hd::-webkit-details-marker{display:none}
+.spu-examplecard__details>.spu-examplecard__hd::after{content:"";width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform var(--dur) var(--ease-out);margin-left:auto;margin-right:.25em;flex:0 0 auto}
+.spu-examplecard__details[open]>.spu-examplecard__hd::after{transform:rotate(-135deg)}
 .spu-examplecard__cover{display:block;width:100%}
 .spu-examplecard__cover img,.spu-examplecard__cover image-slot{display:block;width:100%}
 .spu-examplecard__body{padding:clamp(1.4rem,3vw,2.2rem)}
 .spu-examplecard__title{margin:0 0 var(--space-3)}
 .spu-examplecard__body>:last-child{margin-bottom:0}
+@media print{.spu-examplecard__details:not([open])>.spu-examplecard__content{display:block!important}.spu-examplecard__details>.spu-examplecard__hd::after{display:none}}
 `);
 function ExampleCard({
   children,
@@ -4621,9 +4642,11 @@ function ExampleCard({
   coverHeight = 300,
   fit = 'cover',
   placeholder = 'Foto de capa',
+  collapse = 'none',
   className,
   style
 }) {
+  const printing = __ds_scope.isPrint();
   let cover = null;
   if (slot) {
     cover = React.createElement('image-slot', {
@@ -4643,6 +4666,23 @@ function ExampleCard({
       alt
     });
   }
+  const headerContent = [React.createElement(__ds_scope.Icon, {
+    key: 'icon',
+    name: icon,
+    size: 18
+  }), React.createElement('span', {
+    key: 'label'
+  }, label)];
+  const content = React.createElement('div', {
+    className: 'spu-examplecard__content'
+  }, cover && React.createElement('div', {
+    className: 'spu-examplecard__cover'
+  }, cover), React.createElement('div', {
+    className: 'spu-examplecard__body'
+  }, title && React.createElement('h3', {
+    className: 'spu-examplecard__title'
+  }, title), __ds_scope.renderRich(children)));
+  const collapsible = !printing && (collapse === 'open' || collapse === 'closed');
   return React.createElement('div', {
     className: __ds_scope.cx('spu-examplecard', className),
     style: {
@@ -4651,18 +4691,17 @@ function ExampleCard({
       } : null),
       ...style
     }
-  }, React.createElement('div', {
+  }, collapsible ? React.createElement('details', {
+    className: 'spu-examplecard__details',
+    open: collapse === 'open'
+  }, React.createElement('summary', {
     className: 'spu-examplecard__hd'
-  }, React.createElement(__ds_scope.Icon, {
-    name: icon,
-    size: 18
-  }), React.createElement('span', null, label)), cover && React.createElement('div', {
-    className: 'spu-examplecard__cover'
-  }, cover), React.createElement('div', {
-    className: 'spu-examplecard__body'
-  }, title && React.createElement('h3', {
-    className: 'spu-examplecard__title'
-  }, title), __ds_scope.renderRich(children)));
+  }, headerContent), content) : [React.createElement('div', {
+    key: 'header',
+    className: 'spu-examplecard__hd'
+  }, headerContent), React.cloneElement(content, {
+    key: 'content'
+  })]);
 }
 Object.assign(__ds_scope, { ExampleCard });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/ExampleCard.jsx", error: String((e && e.message) || e) }); }
