@@ -47,7 +47,12 @@ export function Inspector({ ns, block, onPatch }: Props) {
 
   const props = block.props || {};
   const patch = (p: Record<string, unknown>) => onPatch(block.id, p);
-  const labelFor = (key: string) => (block.type === 'mapfigure' && key === 'label' ? 'Título da imagem' : lbl(key));
+  const labelFor = (key: string) => {
+    if (block.type === 'mapfigure' && key === 'label') return 'Título da imagem';
+    if (block.type === 'hero' && key === 'kicker') return 'Nome da competência';
+    if (block.type === 'hero' && key === 'byline') return 'Autoria, subtítulo ou eixo/competência';
+    return lbl(key);
+  };
 
   // ---- controles reutilizáveis ----
 

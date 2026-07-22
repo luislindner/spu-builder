@@ -684,7 +684,7 @@ const BLOCKS = [
   rich: true,
   props: {
     org: 'SPU',
-    program: 'Programa de Aprendizagem em Gestão de Imóveis Públicos'
+    program: 'Programa Gestão de Imóveis Públicos'
   }
 }, {
   type: 'section',
@@ -768,10 +768,10 @@ const BLOCKS = [
   },
   fields: ['kicker', 'title', 'byline'],
   props: {
-    kicker: 'Unidade · Tema',
+    kicker: 'Nome da competência',
     kickerIcon: 'compass',
     title: 'Título da unidade',
-    byline: '',
+    byline: 'Eixo X · Competência X',
     slot: ''
   }
 }, {
@@ -843,7 +843,7 @@ const BLOCKS = [
   }],
   props: {
     code: 'Unidade · Tema',
-    context: 'Descrição curta.',
+    context: 'Este material foi desenvolvido com fins educacionais para o Programa de Desenvolvimento Profissional em Gestão de Imóveis Públicos, da Secretaria de Patrimônio da União – SPU.',
     license: true,
     licenseKind: 'byncsa',
     credits: [{
@@ -6669,7 +6669,7 @@ __ds_scope.injectCss('spu-hero-css', `
 .spu-hero__h1{font-family:var(--font-display);font-weight:800;font-size:clamp(1.85rem,4.2vw,var(--fs-h1));line-height:1.08;letter-spacing:var(--ls-display);color:#fff;margin:.5em 0 0;text-wrap:balance}
 .spu-hero__h1 .spu-richtext{line-height:inherit;color:inherit}
 .spu-hero__h1 .spu-richtext strong,.spu-hero__h1 .spu-richtext b{color:inherit}
-.spu-hero__byline{align-self:flex-start;width:fit-content;max-width:100%;margin-top:clamp(.9rem,1.8vw,1.4rem);background:var(--ochre-800);color:#F6EFE3;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.04em;padding:.85em 1.4em;border-radius:var(--radius);box-shadow:var(--shadow-md)}
+.spu-hero__byline{align-self:flex-start;width:fit-content;max-width:100%;margin-top:clamp(.9rem,1.8vw,1.4rem);background:var(--ochre-800);color:#F6EFE3;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.04em;text-transform:uppercase;padding:.85em 1.4em;border-radius:var(--radius);box-shadow:var(--shadow-md)}
 .spu-hero__kicker .spu-richtext,.spu-hero__byline .spu-richtext{color:inherit;line-height:inherit}
 .spu-hero__kicker .spu-richtext strong,.spu-hero__kicker .spu-richtext b,.spu-hero__byline .spu-richtext strong,.spu-hero__byline .spu-richtext b{color:inherit}
 @media (max-width:720px){

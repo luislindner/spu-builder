@@ -201,6 +201,12 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   program: 'Nome do programa',
 };
 
+function fieldPlaceholder(block: Block, key: string) {
+  if (block.type === 'hero' && key === 'kicker') return 'Nome da competência';
+  if (block.type === 'hero' && key === 'byline') return 'Autoria, subtítulo ou eixo/competência';
+  return FIELD_PLACEHOLDERS[key] || key;
+}
+
 function editableContainerProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
   const fields = def.fields || [];
   if (!fields.length) return block.props;
@@ -214,7 +220,7 @@ function editableContainerProps(block: Block, def: BlockDef, cb: NodeCallbacks) 
         html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
         single={inline}
         as={inline ? 'span' : 'div'}
-        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        placeholder={fieldPlaceholder(block, key)}
         onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
       />
     );
@@ -341,7 +347,7 @@ function editableLeafProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
         html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
         single={!BLOCK_LEVEL_FIELDS.has(key)}
         as={BLOCK_LEVEL_FIELDS.has(key) ? 'div' : 'span'}
-        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        placeholder={fieldPlaceholder(block, key)}
         onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
       />
     );
