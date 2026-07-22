@@ -1125,9 +1125,9 @@ const BLOCKS = [
   label: 'Bloco de destaque',
   icon: 'square',
   cat: 'Destaques',
-  kind: 'text',
+  kind: 'container',
   rich: true,
-  fields: ['kicker', 'title', 'children'],
+  fields: ['kicker', 'title', 'body'],
   propFields: [{
     key: 'variant',
     label: 'Estilo',
@@ -1176,7 +1176,8 @@ const BLOCKS = [
     title: 'Título do bloco',
     color: '',
     bg: '',
-    children: '<p>Conteúdo do bloco.</p>'
+    body: '<p>Conteúdo do bloco.</p>',
+    children: []
   }
 },
 // ── Mídia ──
@@ -1579,6 +1580,11 @@ const BLOCKS = [
   cat: 'Mídia',
   kind: 'list',
   itemsKey: 'items',
+  propFields: [{
+    key: 'accent',
+    label: 'Cor do conjunto de ícones',
+    type: 'accent'
+  }],
   itemFields: [{
     key: 'icon',
     label: 'Ícone',
@@ -1597,6 +1603,7 @@ const BLOCKS = [
   props: {
     columns: 3,
     card: true,
+    accent: '',
     items: [{
       icon: 'building',
       title: 'Título',
@@ -2018,6 +2025,12 @@ function migrate(doc) {
     if (b.type === 'conclusion' && typeof b.props.children === 'string') {
       b.props.body = b.props.body || b.props.children;
       b.props.children = [];
+    }
+    // 10 — Panel: conteúdo textual antigo vira `body`; children passa a ser array de blocos.
+    if (b.type === 'panel' && typeof b.props.children === 'string') {
+      b.props.body = b.props.body || b.props.children;
+      b.props.children = [];
+      if (!Array.isArray(b.children)) b.children = [];
     }
     if (b.children) walk(b.children);
   });
@@ -4952,6 +4965,8 @@ __ds_scope.injectCss('spu-panel-css', `
 .spu-panel{background:var(--color-surface-warm);background-image:var(--texture-topo);background-size:360px;border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:clamp(1.4rem,3vw,2.2rem);margin:var(--flow-block) 0}
 .spu-panel__kicker{margin-bottom:var(--space-3)}
 .spu-panel__title{margin:0 0 var(--space-4)}
+.spu-panel__body{color:var(--text-body)}
+.spu-panel__body+:where(.spu-blockstack){margin-top:var(--space-5)}
 .spu-panel>:last-child{margin-bottom:0}
 .spu-panel--accent{border-left:var(--border-accent) solid var(--_pc, var(--color-accent))}
 /* Card que extravasa a coluna de leitura (mais largo, centrado na viewport) */
@@ -4963,6 +4978,7 @@ __ds_scope.injectCss('spu-panel-css', `
 `);
 function Panel({
   children,
+  body,
   variant = 'box',
   wide = false,
   kicker,
@@ -4985,7 +5001,9 @@ function Panel({
     key: 't',
     className: 'spu-panel__title'
   }, title)];
-  const inner = [...head, __ds_scope.renderRich(children)];
+  const inner = [...head, body && React.createElement('div', {
+    className: 'spu-panel__body'
+  }, __ds_scope.renderRich(body)), __ds_scope.renderRich(children)];
   if (variant === 'feature') {
     return React.createElement('div', {
       className: __ds_scope.cx('spu-panel', 'spu-panel--feature', color && 'spu-panel--accent', className),
