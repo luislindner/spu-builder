@@ -14,6 +14,40 @@ function copyAlias(props: JsonRecord, target: string, aliases: string[]) {
   if (alias) props[target] = props[alias];
 }
 
+export function normalizeEditorWhitespace(value: string): string {
+  const clean = value.replace(/(?:&nbsp;|\u00a0)/gi, ' ');
+  if (!/[<>]/.test(clean)) return clean;
+
+  let html = clean
+    .replace(/<div(?:\s[^>]*)?>/gi, '<p>')
+    .replace(/<\/div>/gi, '</p>');
+
+  if (!/<(?:p|ul|ol|blockquote|h[1-6])\b/i.test(html) && /(?:<br\s*\/?>\s*){2,}/i.test(html)) {
+    html = `<p>${html.replace(/(?:<br\s*\/?>\s*){2,}/gi, '</p><p>')}</p>`;
+  }
+
+  if (/<p\b/i.test(html) && !/^\s*<(?:p|ul|ol|blockquote|h[1-6])\b/i.test(html)) {
+    html = html.replace(/^([\s\S]*?)(?=<p\b)/i, '<p>$1</p>');
+  }
+
+  return html
+    .replace(/<p>\s*<p>/gi, '<p>')
+    .replace(/<\/p>\s*<\/p>/gi, '</p>')
+    .replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '<p><br></p>');
+}
+
+function normalizeStrings(value: unknown): unknown {
+  if (typeof value === 'string') return normalizeEditorWhitespace(value);
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => { value[index] = normalizeStrings(item); });
+    return value;
+  }
+  if (isRecord(value)) {
+    Object.keys(value).forEach((key) => { value[key] = normalizeStrings(value[key]); });
+  }
+  return value;
+}
+
 function normalizeListItems(block: JsonRecord, props: JsonRecord) {
   if (block.type === 'accordion' && Array.isArray(props.items)) {
     props.items.forEach((value) => {
@@ -44,6 +78,8 @@ function normalizeListItems(block: JsonRecord, props: JsonRecord) {
  */
 export function normalizeProjectContent(raw: unknown): unknown {
   if (!isRecord(raw)) return raw;
+
+  normalizeStrings(raw);
 
   const walk = (blocks: unknown[]) => {
     blocks.forEach((value) => {

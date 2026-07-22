@@ -123,6 +123,40 @@
   opacity: 0.7;
 }
 
+.accordionBlocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border);
+}
+
+.accordionBlock {
+  position: relative;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.accordionBlockActions {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 4;
+}
+
+.accordionBlockActions button {
+  width: 25px;
+  height: 25px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--status-error);
+  cursor: pointer;
+}
+
 /* ── Handles sobrepostos ── */
 .handles {
   position: absolute;

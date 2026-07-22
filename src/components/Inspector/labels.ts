@@ -42,6 +42,8 @@ export const FIELD_LABELS: Record<string, string> = {
   org: 'Identidade', program: 'Nome do programa',
   beforeLabel: 'Rótulo “antes”', afterLabel: 'Rótulo “depois”',
   beforeSlot: 'Imagem “antes”', afterSlot: 'Imagem “depois”',
+  showImage: 'Exibir imagem', subtitle: 'Subtítulo', linkHref: 'URL do link', linkLabel: 'Texto do link',
+  hint: 'Chamada superior', accent: 'Cor de acento', alt: 'Texto alternativo',
 };
 
 export const lbl = (k: string) => FIELD_LABELS[k] || k;

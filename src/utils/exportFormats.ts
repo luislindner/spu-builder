@@ -33,6 +33,8 @@ const BUILDER_EXPORT_CSS = `
 .spu-figure--total { width: 100%; }
 .spu-block-title:is(h2) { line-height: 1.06; }
 .spu-block-title .spu-richtext { line-height: inherit; }
+.spu-conclusion .spu-richtext :is(strong, b) { color: inherit; }
+.spu-accordion-blocks { display:flex; flex-direction:column; gap:var(--flow-block); margin-top:var(--space-5); }
 .spu-richtext [data-term] {
   position: relative;
   display: inline-block;
@@ -160,7 +162,7 @@ const DS_COMPAT_JS = `
 (function(){
   window.__SPU_INSTALL_DS_COMPAT = function(NS){
     if(!NS || NS.__spuBuilderCompat) return;
-    var COMPAT_TYPES = ['pagefooter','markerlist','reflexao','mapfigure','statblock','feature','accordion','timeline','quiz','flashcard','compareab','carousel'];
+    var COMPAT_TYPES = ['pagefooter','markerlist','reflexao','mapfigure','statblock','feature','accordion','timeline','quiz','flashcard','compareab','carousel','contentslider'];
     var RICH_ITEM_FIELDS = {
       pagefooter:['role','name'],
       markerlist:['title','text'],
@@ -171,7 +173,8 @@ const DS_COMPAT_JS = `
       accordion:['title','content','linkLabel'],
       timeline:['label','period','date','title','content','linkLabel'],
       quiz:['question','text','feedback'],
-      carousel:['title','caption','credit']
+      carousel:['title','caption','credit'],
+      contentslider:['label','title','subtitle','description','linkLabel','caption']
     };
     var RICH_PROP_FIELDS = {
       flashcard:['term','definition'],
@@ -208,12 +211,40 @@ const DS_COMPAT_JS = `
       });
     }
     function inline(value){
+      value = normalizeWhitespace(value);
       if(typeof value !== 'string' || !/[<&]/.test(value) || !NS.RichText) return value;
       return React.createElement(NS.RichText, { html: value, as: 'span', className: 'spu-richtext--inline' });
     }
     function block(value){
+      value = normalizeWhitespace(value);
       if(typeof value !== 'string' || !/[<&]/.test(value) || !NS.RichText) return value;
       return React.createElement(NS.RichText, { html: value });
+    }
+    function normalizeWhitespace(value){
+      if(typeof value !== 'string') return value;
+      var html = value.replace(/(?:&nbsp;|\u00a0)/gi, ' ');
+      if(!/[<>]/.test(html)) return html;
+      html = html.replace(/<div(?:\\s[^>]*)?>/gi, '<p>').replace(/<\\/div>/gi, '</p>');
+      if(!/<(?:p|ul|ol|blockquote|h[1-6])\\b/i.test(html) && /(?:<br\\s*\\/?>\\s*){2,}/i.test(html)){
+        html = '<p>' + html.replace(/(?:<br\\s*\\/?>\\s*){2,}/gi, '</p><p>') + '</p>';
+      }
+      if(/<p\\b/i.test(html) && !/^\\s*<(?:p|ul|ol|blockquote|h[1-6])\\b/i.test(html)){
+        html = html.replace(/^([\\s\\S]*?)(?=<p\\b)/i, '<p>$1</p>');
+      }
+      return html.replace(/<p>\\s*<p>/gi, '<p>')
+        .replace(/<\\/p>\\s*<\\/p>/gi, '</p>')
+        .replace(/<p>\\s*<br\\s*\\/?>\\s*<\\/p>/gi, '<p><br></p>');
+    }
+    var Editable = NS.Editable;
+    if(Editable){
+      NS.Editable = function(props){
+        props = props || {};
+        var onChange = props.onChange;
+        return React.createElement(Editable, Object.assign({}, props, {
+          html: normalizeWhitespace(props.html),
+          onChange: onChange ? function(value){ onChange(normalizeWhitespace(value)); } : undefined
+        }));
+      };
     }
     var Masthead = NS.Masthead;
     if(Masthead){
@@ -272,6 +303,24 @@ const DS_COMPAT_JS = `
         return React.createElement(Original, richifyProps(type, props || {}));
       };
     });
+    var Accordion = NS.Accordion;
+    if(Accordion){
+      NS.Accordion = function(props){
+        props = props || {};
+        var items = Array.isArray(props.items) ? props.items.map(function(item){
+          if(!item || typeof item !== 'object' || Array.isArray(item) || !Array.isArray(item.blocks) || !item.blocks.length) return item;
+          return Object.assign({}, item, {
+            content: React.createElement(React.Fragment, null,
+              block(item.content),
+              React.createElement('div', { className:'spu-accordion-blocks' }, item.blocks.map(function(nested, index){
+                return React.createElement(NS.BlockView, { key:nested.id || index, block:nested, mode:'preview' });
+              }))
+            )
+          });
+        }) : props.items;
+        return React.createElement(Accordion, Object.assign({}, props, { items:items }));
+      };
+    }
     NS.__spuBuilderCompat = true;
   };
 })();`;
@@ -364,7 +413,7 @@ function buildPageHtml(o: PageOpts): string {
     : `<script src="assets/react.js"></script>\n<script src="assets/react-dom.js"></script>`;
 
   const cssTag = o.inline ? `<style>${o.stylesCss}\n${BUILDER_EXPORT_CSS}</style>` : `<link rel="stylesheet" href="assets/styles.css">\n<style>${BUILDER_EXPORT_CSS}</style>`;
-  const bundleTag = o.inline ? `<script>${escapeInlineScript(o.bundleJs)}</script>` : `<script src="assets/_ds_bundle.js"></script>`;
+  const bundleTag = o.inline ? `<script>${escapeInlineScript(o.bundleJs)}</script>` : `<script src="assets/ds-bundle.js"></script>`;
   const printFlag = o.print ? `<script>window.__SPU_PRINT=true;</script>` : '';
   const printCss = o.print ? `<style>
 @page { size: A4; margin: 0; }
@@ -607,7 +656,7 @@ export async function exportAssetsZip(doc: Doc) {
   const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   files['index.html'] = strToU8(html);
   files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
-  files['assets/_ds_bundle.js'] = strToU8(bundleJs);
+  files['assets/ds-bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
   files['assets/react.js'] = strToU8(react.react);
   files['assets/react-dom.js'] = strToU8(react.reactDom);
@@ -673,7 +722,7 @@ export async function exportScormZip(doc: Doc) {
   files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
   files['imsmanifest.xml'] = strToU8(imsmanifest(doc));
   files['scorm-api.js'] = strToU8(SCORM_API_JS);
-  files['assets/_ds_bundle.js'] = strToU8(bundleJs);
+  files['assets/ds-bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
   files['assets/react.js'] = strToU8(react.react);
   files['assets/react-dom.js'] = strToU8(react.reactDom);

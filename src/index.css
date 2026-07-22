@@ -115,6 +115,18 @@ button { font-family: inherit; }
   font-family: var(--font-display);
 }
 
+/* Full-bleed escuro: negrito deve manter a cor clara herdada do texto. */
+.spu-conclusion .spu-richtext :is(strong, b) {
+  color: inherit;
+}
+
+.spu-accordion-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--flow-block);
+  margin-top: var(--space-5);
+}
+
 .spu-term-pop.is-open {
   display: block;
 }
