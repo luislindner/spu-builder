@@ -4670,7 +4670,9 @@ Object.assign(__ds_scope, { ExampleCard });
 // components/content/FeatureGrid.jsx
 try { (() => {
 __ds_scope.injectCss('spu-features-css', `
-.spu-features{display:grid;gap:var(--space-6)}
+.spu-features{display:grid;grid-template-columns:repeat(var(--spu-feature-columns,3),minmax(0,1fr));gap:var(--space-6)}
+@media(max-width:900px){.spu-features[data-columns="3"],.spu-features[data-columns="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.spu-features{grid-template-columns:1fr}}
 .spu-feature__icon{width:48px;height:48px;border-radius:var(--radius-md);background:var(--color-primary-soft);color:var(--color-primary-strong);display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-3)}
 .spu-feature__title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-h6);line-height:1.25;margin:0 0 .3em;color:var(--text-strong)}
 .spu-feature__text{color:var(--text-muted);font-size:var(--fs-small);margin:0}
@@ -4684,15 +4686,16 @@ function FeatureGrid({
   className,
   style
 }) {
-  // Responsivo: `columns` é o alvo em telas largas; auto-fit quebra quando
-  // não cabe e min() evita overflow (cai para 1 coluna no celular).
-  const minw = columns >= 4 ? 180 : columns === 3 ? 210 : columns === 2 ? 250 : 220;
+  // Respeita a quantidade escolhida em telas largas. As media queries reduzem
+  // grades maiores no tablet e todas as grades para uma coluna no celular.
+  const columnCount = Math.max(1, Math.min(4, Math.round(Number(columns) || 3)));
   const gridStyle = {
-    gridTemplateColumns: `repeat(auto-fit, minmax(min(${minw}px, 100%), 1fr))`,
+    '--spu-feature-columns': columnCount,
     ...style
   };
   return React.createElement('div', {
     className: __ds_scope.cx('spu-features', className),
+    'data-columns': columnCount,
     style: gridStyle
   }, items.map((it, i) => React.createElement('div', {
     key: i,
