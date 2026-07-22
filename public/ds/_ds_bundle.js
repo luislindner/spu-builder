@@ -186,7 +186,7 @@ try { (() => {
   }
 
   // ── Custom element ──────────────────────────────────────────────────────
-  const stylesheet = ':host{display:inline-block;position:relative;vertical-align:top;' + '  font:13px/1.3 system-ui,-apple-system,sans-serif;color:rgba(0,0,0,.55);width:240px;height:160px}' + '.frame{position:absolute;inset:0;overflow:hidden;background:rgba(0,0,0,.04)}' +
+  const stylesheet = ':host{display:inline-block;position:relative;vertical-align:top;' + '  font:13px/1.3 system-ui,-apple-system,sans-serif;color:rgba(0,0,0,.55);width:240px;height:160px}' + ':host([data-auto-height][data-filled]){height:auto;min-height:0!important}' + '.frame{position:absolute;inset:0;overflow:hidden;background:rgba(0,0,0,.04)}' +
   // .frame img (clipped) and .spill (unclipped ghost + handles) share the
   // same left/top/width/height in frame-%, computed by _applyView(), so the
   // inside-mask crop and the outside-mask spill stay pixel-aligned.
@@ -254,7 +254,10 @@ try { (() => {
       });
       // naturalWidth/Height aren't known until load — re-apply so the cover
       // baseline is computed from real dimensions, not the 100%×100% fallback.
-      this._img.addEventListener('load', () => this._applyView());
+      this._img.addEventListener('load', () => {
+        this._syncAutoHeight();
+        this._applyView();
+      });
       // Gated on editable + fit=cover so share links and contain/fill slots
       // stay static.
       this.addEventListener('dblclick', e => {
@@ -586,6 +589,13 @@ try { (() => {
         this._local = v;
       }
     }
+    _syncAutoHeight() {
+      if (this.hasAttribute('data-auto-height') && this._img.naturalWidth && this._img.naturalHeight) {
+        this.style.aspectRatio = `${this._img.naturalWidth} / ${this._img.naturalHeight}`;
+      } else {
+        this.style.removeProperty('aspect-ratio');
+      }
+    }
     _render() {
       // Shape / mask. Presets use border-radius so the dashed ring can
       // follow the rounded outline; clip-path is only applied for an
@@ -637,9 +647,11 @@ try { (() => {
         this._empty.style.display = 'none';
         this.setAttribute('data-filled', '');
         this.style.display = '';
+        this._syncAutoHeight();
         this._clampView();
         this._applyView();
       } else {
+        this.style.removeProperty('aspect-ratio');
         this._img.style.display = 'none';
         this._img.removeAttribute('src');
         this._ghost.removeAttribute('src');
@@ -7004,6 +7016,7 @@ function MapFigure({
     id: slot,
     shape: 'rect',
     fit: 'cover',
+    'data-auto-height': '',
     placeholder: 'Arraste uma imagem',
     style: {
       width: '100%',

@@ -67,6 +67,10 @@ button { font-family: inherit; }
   line-height: inherit;
 }
 
+.spu-content-slider__title .spu-richtext {
+  line-height: inherit;
+}
+
 .spu-richtext [data-term] {
   position: relative;
   display: inline-block;
