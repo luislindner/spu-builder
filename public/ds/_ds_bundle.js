@@ -6674,9 +6674,9 @@ __ds_scope.injectCss('spu-hero-css', `
 .spu-hero__kicker .spu-richtext strong,.spu-hero__kicker .spu-richtext b,.spu-hero__byline .spu-richtext strong,.spu-hero__byline .spu-richtext b{color:inherit}
 @media (max-width:720px){
   .spu-hero{display:block;min-height:0 !important}
-  .spu-hero__bg{position:relative;inset:auto;height:40vh;min-height:220px}
-  .spu-hero__inner{display:block;min-height:0;padding:0 var(--gutter) clamp(1.75rem,6vw,2.5rem)}
-  .spu-hero__boxes{transform:none !important;max-width:none;position:relative;margin-top:clamp(-3rem,-7vw,-2rem)}
+  .spu-hero__bg{position:absolute;inset:0;height:auto;min-height:0}
+  .spu-hero__inner{display:block;min-height:0;padding:max(12rem,calc(40vh - 3rem)) var(--gutter) clamp(1.75rem,6vw,2.5rem)}
+  .spu-hero__boxes{transform:none !important;max-width:none;position:relative;margin-top:0}
   .spu-hero__title{box-shadow:var(--shadow-md)}
 }
 @media (prefers-reduced-motion:reduce){.spu-hero__bg,.spu-hero__boxes{transform:none !important}}
