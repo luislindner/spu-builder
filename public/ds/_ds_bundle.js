@@ -684,7 +684,7 @@ const BLOCKS = [
   rich: true,
   props: {
     org: 'SPU',
-    program: 'Programa de Aprendizagem em Gestão de Imóveis Públicos'
+    program: 'Programa Gestão de Imóveis Públicos'
   }
 }, {
   type: 'section',
@@ -768,10 +768,10 @@ const BLOCKS = [
   },
   fields: ['kicker', 'title', 'byline'],
   props: {
-    kicker: 'Unidade · Tema',
+    kicker: 'Nome da competência',
     kickerIcon: 'compass',
     title: 'Título da unidade',
-    byline: '',
+    byline: 'Eixo X · Competência X',
     slot: ''
   }
 }, {
@@ -843,7 +843,7 @@ const BLOCKS = [
   }],
   props: {
     code: 'Unidade · Tema',
-    context: 'Descrição curta.',
+    context: 'Este material foi desenvolvido com fins educacionais para o Programa de Desenvolvimento Profissional em Gestão de Imóveis Públicos, da Secretaria de Patrimônio da União – SPU.',
     license: true,
     licenseKind: 'byncsa',
     credits: [{
@@ -1481,11 +1481,27 @@ const BLOCKS = [
   kind: 'text',
   rich: true,
   fields: ['label', 'title', 'children'],
+  propFields: [{
+    key: 'collapse',
+    label: 'Comportamento',
+    type: 'select',
+    options: [{
+      value: 'none',
+      label: 'Sempre aberto'
+    }, {
+      value: 'open',
+      label: 'Retrátil, inicialmente aberto'
+    }, {
+      value: 'closed',
+      label: 'Retrátil, inicialmente fechado'
+    }]
+  }],
   props: {
     label: 'Exemplo prático',
     icon: 'map-pin',
     color: '',
     slot: '',
+    collapse: 'none',
     title: 'Título do exemplo',
     children: '<p>Descrição do caso.</p>'
   }
@@ -4603,11 +4619,16 @@ __ds_scope.injectCss('spu-examplecard-css', `
 .spu-examplecard{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);overflow:hidden;margin:var(--flow-block) 0;box-shadow:var(--shadow-sm)}
 .spu-examplecard__hd{display:flex;align-items:center;gap:.55em;padding:.72em 1.1em;background:var(--_ec, var(--color-primary));color:#fff;font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:600;letter-spacing:.1em;text-transform:uppercase;line-height:1.3}
 .spu-examplecard__hd svg{flex:0 0 auto}
+.spu-examplecard__details>.spu-examplecard__hd{cursor:pointer;list-style:none}
+.spu-examplecard__details>.spu-examplecard__hd::-webkit-details-marker{display:none}
+.spu-examplecard__details>.spu-examplecard__hd::after{content:"";width:9px;height:9px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform var(--dur) var(--ease-out);margin-left:auto;margin-right:.25em;flex:0 0 auto}
+.spu-examplecard__details[open]>.spu-examplecard__hd::after{transform:rotate(-135deg)}
 .spu-examplecard__cover{display:block;width:100%}
 .spu-examplecard__cover img,.spu-examplecard__cover image-slot{display:block;width:100%}
 .spu-examplecard__body{padding:clamp(1.4rem,3vw,2.2rem)}
 .spu-examplecard__title{margin:0 0 var(--space-3)}
 .spu-examplecard__body>:last-child{margin-bottom:0}
+@media print{.spu-examplecard__details:not([open])>.spu-examplecard__content{display:block!important}.spu-examplecard__details>.spu-examplecard__hd::after{display:none}}
 `);
 function ExampleCard({
   children,
@@ -4621,9 +4642,11 @@ function ExampleCard({
   coverHeight = 300,
   fit = 'cover',
   placeholder = 'Foto de capa',
+  collapse = 'none',
   className,
   style
 }) {
+  const printing = __ds_scope.isPrint();
   let cover = null;
   if (slot) {
     cover = React.createElement('image-slot', {
@@ -4643,6 +4666,23 @@ function ExampleCard({
       alt
     });
   }
+  const headerContent = [React.createElement(__ds_scope.Icon, {
+    key: 'icon',
+    name: icon,
+    size: 18
+  }), React.createElement('span', {
+    key: 'label'
+  }, label)];
+  const content = React.createElement('div', {
+    className: 'spu-examplecard__content'
+  }, cover && React.createElement('div', {
+    className: 'spu-examplecard__cover'
+  }, cover), React.createElement('div', {
+    className: 'spu-examplecard__body'
+  }, title && React.createElement('h3', {
+    className: 'spu-examplecard__title'
+  }, title), __ds_scope.renderRich(children)));
+  const collapsible = !printing && (collapse === 'open' || collapse === 'closed');
   return React.createElement('div', {
     className: __ds_scope.cx('spu-examplecard', className),
     style: {
@@ -4651,18 +4691,17 @@ function ExampleCard({
       } : null),
       ...style
     }
-  }, React.createElement('div', {
+  }, collapsible ? React.createElement('details', {
+    className: 'spu-examplecard__details',
+    open: collapse === 'open'
+  }, React.createElement('summary', {
     className: 'spu-examplecard__hd'
-  }, React.createElement(__ds_scope.Icon, {
-    name: icon,
-    size: 18
-  }), React.createElement('span', null, label)), cover && React.createElement('div', {
-    className: 'spu-examplecard__cover'
-  }, cover), React.createElement('div', {
-    className: 'spu-examplecard__body'
-  }, title && React.createElement('h3', {
-    className: 'spu-examplecard__title'
-  }, title), __ds_scope.renderRich(children)));
+  }, headerContent), content) : [React.createElement('div', {
+    key: 'header',
+    className: 'spu-examplecard__hd'
+  }, headerContent), React.cloneElement(content, {
+    key: 'content'
+  })]);
 }
 Object.assign(__ds_scope, { ExampleCard });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/ExampleCard.jsx", error: String((e && e.message) || e) }); }
@@ -4670,7 +4709,9 @@ Object.assign(__ds_scope, { ExampleCard });
 // components/content/FeatureGrid.jsx
 try { (() => {
 __ds_scope.injectCss('spu-features-css', `
-.spu-features{display:grid;gap:var(--space-6)}
+.spu-features{display:grid;grid-template-columns:repeat(var(--spu-feature-columns,3),minmax(0,1fr));gap:var(--space-6)}
+@media(max-width:900px){.spu-features[data-columns="3"],.spu-features[data-columns="4"]{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.spu-features{grid-template-columns:1fr}}
 .spu-feature__icon{width:48px;height:48px;border-radius:var(--radius-md);background:var(--color-primary-soft);color:var(--color-primary-strong);display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-3)}
 .spu-feature__title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-h6);line-height:1.25;margin:0 0 .3em;color:var(--text-strong)}
 .spu-feature__text{color:var(--text-muted);font-size:var(--fs-small);margin:0}
@@ -4684,15 +4725,16 @@ function FeatureGrid({
   className,
   style
 }) {
-  // Responsivo: `columns` é o alvo em telas largas; auto-fit quebra quando
-  // não cabe e min() evita overflow (cai para 1 coluna no celular).
-  const minw = columns >= 4 ? 180 : columns === 3 ? 210 : columns === 2 ? 250 : 220;
+  // Respeita a quantidade escolhida em telas largas. As media queries reduzem
+  // grades maiores no tablet e todas as grades para uma coluna no celular.
+  const columnCount = Math.max(1, Math.min(4, Math.round(Number(columns) || 3)));
   const gridStyle = {
-    gridTemplateColumns: `repeat(auto-fit, minmax(min(${minw}px, 100%), 1fr))`,
+    '--spu-feature-columns': columnCount,
     ...style
   };
   return React.createElement('div', {
     className: __ds_scope.cx('spu-features', className),
+    'data-columns': columnCount,
     style: gridStyle
   }, items.map((it, i) => React.createElement('div', {
     key: i,
@@ -6627,14 +6669,14 @@ __ds_scope.injectCss('spu-hero-css', `
 .spu-hero__h1{font-family:var(--font-display);font-weight:800;font-size:clamp(1.85rem,4.2vw,var(--fs-h1));line-height:1.08;letter-spacing:var(--ls-display);color:#fff;margin:.5em 0 0;text-wrap:balance}
 .spu-hero__h1 .spu-richtext{line-height:inherit;color:inherit}
 .spu-hero__h1 .spu-richtext strong,.spu-hero__h1 .spu-richtext b{color:inherit}
-.spu-hero__byline{align-self:flex-start;width:fit-content;max-width:100%;margin-top:clamp(.9rem,1.8vw,1.4rem);background:var(--ochre-800);color:#F6EFE3;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.04em;padding:.85em 1.4em;border-radius:var(--radius);box-shadow:var(--shadow-md)}
+.spu-hero__byline{align-self:flex-start;width:fit-content;max-width:100%;margin-top:clamp(.9rem,1.8vw,1.4rem);background:var(--ochre-800);color:#F6EFE3;font-family:var(--font-mono);font-size:.86rem;letter-spacing:.04em;text-transform:uppercase;padding:.85em 1.4em;border-radius:var(--radius);box-shadow:var(--shadow-md)}
 .spu-hero__kicker .spu-richtext,.spu-hero__byline .spu-richtext{color:inherit;line-height:inherit}
 .spu-hero__kicker .spu-richtext strong,.spu-hero__kicker .spu-richtext b,.spu-hero__byline .spu-richtext strong,.spu-hero__byline .spu-richtext b{color:inherit}
 @media (max-width:720px){
   .spu-hero{display:block;min-height:0 !important}
-  .spu-hero__bg{position:relative;inset:auto;height:40vh;min-height:220px}
-  .spu-hero__inner{display:block;min-height:0;padding:0 var(--gutter) clamp(1.75rem,6vw,2.5rem)}
-  .spu-hero__boxes{transform:none !important;max-width:none;position:relative;margin-top:clamp(-3rem,-7vw,-2rem)}
+  .spu-hero__bg{position:absolute;inset:0;height:auto;min-height:0}
+  .spu-hero__inner{display:block;min-height:0;padding:max(12rem,calc(40vh - 3rem)) var(--gutter) clamp(1.75rem,6vw,2.5rem)}
+  .spu-hero__boxes{transform:none !important;max-width:none;position:relative;margin-top:0}
   .spu-hero__title{box-shadow:var(--shadow-md)}
 }
 @media (prefers-reduced-motion:reduce){.spu-hero__bg,.spu-hero__boxes{transform:none !important}}

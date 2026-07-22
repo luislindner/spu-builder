@@ -201,6 +201,12 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   program: 'Nome do programa',
 };
 
+function fieldPlaceholder(block: Block, key: string) {
+  if (block.type === 'hero' && key === 'kicker') return 'Nome da competência';
+  if (block.type === 'hero' && key === 'byline') return 'Autoria, subtítulo ou eixo/competência';
+  return FIELD_PLACEHOLDERS[key] || key;
+}
+
 function editableContainerProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
   const fields = def.fields || [];
   if (!fields.length) return block.props;
@@ -214,7 +220,7 @@ function editableContainerProps(block: Block, def: BlockDef, cb: NodeCallbacks) 
         html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
         single={inline}
         as={inline ? 'span' : 'div'}
-        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        placeholder={fieldPlaceholder(block, key)}
         onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
       />
     );
@@ -341,7 +347,7 @@ function editableLeafProps(block: Block, def: BlockDef, cb: NodeCallbacks) {
         html={typeof block.props[key] === 'string' ? block.props[key] as string : ''}
         single={!BLOCK_LEVEL_FIELDS.has(key)}
         as={BLOCK_LEVEL_FIELDS.has(key) ? 'div' : 'span'}
-        placeholder={FIELD_PLACEHOLDERS[key] || key}
+        placeholder={fieldPlaceholder(block, key)}
         onChange={(html) => cb.onInlineEdit(block, { [key]: html })}
       />
     );
@@ -391,6 +397,13 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
   const updateBlocks = (itemIndex: number, blocks: Block[]) => {
     cb.onInlineEdit(block, { items: replaceAtPath(sourceItems, [itemIndex, 'blocks'], blocks) });
   };
+  const moveBlock = (itemIndex: number, blocks: Block[], from: number, to: number) => {
+    if (to < 0 || to >= blocks.length) return;
+    const reordered = blocks.slice();
+    const [moving] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moving);
+    updateBlocks(itemIndex, reordered);
+  };
 
   const items = sourceItems.map((source, itemIndex) => {
     const editable = editableItemValue(source, def.itemFields || [], block, cb, 'items', [itemIndex]);
@@ -406,6 +419,18 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
         {blocks.map((nested, nestedIndex) => (
           <div className={styles.accordionBlock} key={nested.id}>
             <div className={styles.accordionBlockActions}>
+              <button
+                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex - 1)}
+                disabled={nestedIndex === 0}
+                title="Mover bloco para cima"
+                aria-label="Mover bloco para cima"
+              >↑</button>
+              <button
+                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex + 1)}
+                disabled={nestedIndex === blocks.length - 1}
+                title="Mover bloco para baixo"
+                aria-label="Mover bloco para baixo"
+              >↓</button>
               <button onClick={() => updateBlocks(itemIndex, blocks.filter((_, index) => index !== nestedIndex))} title="Remover bloco">✕</button>
             </div>
             <ns.BlockView
@@ -420,6 +445,7 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
         <InsertBlockButton
           ns={ns}
           allowedTypes={allowedTypes}
+          embedded
           onInsert={(type) => {
             const nested = ns.BlockRegistry.newBlock(type);
             if (nested) updateBlocks(itemIndex, [...blocks, prepareBlock(nested)]);

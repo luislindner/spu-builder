@@ -37,6 +37,37 @@
   transform: none;
 }
 
+.triggerEmbedded {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  width: 100%;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-style: dashed;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+  font-size: var(--fs-caption);
+  opacity: 1;
+}
+
+.triggerEmbedded > span:first-child {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.triggerEmbedded:hover,
+.triggerEmbedded:focus-visible,
+.triggerEmbedded[aria-expanded="true"] {
+  transform: none;
+  background: var(--color-primary-soft);
+}
+
 .triggerTitle { bottom: -25px; }
 .triggerTight { bottom: -17px; }
 
