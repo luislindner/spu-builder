@@ -33,6 +33,7 @@ const BUILDER_EXPORT_CSS = `
 .spu-figure--total { width: 100%; }
 .spu-block-title:is(h2) { line-height: 1.06; }
 .spu-block-title .spu-richtext { line-height: inherit; }
+.spu-content-slider__title .spu-richtext { line-height: inherit; }
 .spu-conclusion .spu-richtext :is(strong, b) { color: inherit; }
 .spu-accordion-blocks { display:flex; flex-direction:column; gap:var(--flow-block); margin-top:var(--space-5); }
 .spu-richtext [data-term] {
