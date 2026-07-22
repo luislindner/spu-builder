@@ -391,6 +391,13 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
   const updateBlocks = (itemIndex: number, blocks: Block[]) => {
     cb.onInlineEdit(block, { items: replaceAtPath(sourceItems, [itemIndex, 'blocks'], blocks) });
   };
+  const moveBlock = (itemIndex: number, blocks: Block[], from: number, to: number) => {
+    if (to < 0 || to >= blocks.length) return;
+    const reordered = blocks.slice();
+    const [moving] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moving);
+    updateBlocks(itemIndex, reordered);
+  };
 
   const items = sourceItems.map((source, itemIndex) => {
     const editable = editableItemValue(source, def.itemFields || [], block, cb, 'items', [itemIndex]);
@@ -406,6 +413,18 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
         {blocks.map((nested, nestedIndex) => (
           <div className={styles.accordionBlock} key={nested.id}>
             <div className={styles.accordionBlockActions}>
+              <button
+                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex - 1)}
+                disabled={nestedIndex === 0}
+                title="Mover bloco para cima"
+                aria-label="Mover bloco para cima"
+              >↑</button>
+              <button
+                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex + 1)}
+                disabled={nestedIndex === blocks.length - 1}
+                title="Mover bloco para baixo"
+                aria-label="Mover bloco para baixo"
+              >↓</button>
               <button onClick={() => updateBlocks(itemIndex, blocks.filter((_, index) => index !== nestedIndex))} title="Remover bloco">✕</button>
             </div>
             <ns.BlockView

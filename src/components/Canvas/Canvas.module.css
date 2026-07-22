@@ -145,6 +145,8 @@
   top: var(--space-1);
   right: var(--space-1);
   z-index: 4;
+  display: flex;
+  gap: var(--space-1);
 }
 
 .accordionBlockActions button {
@@ -155,6 +157,11 @@
   background: var(--color-surface);
   color: var(--status-error);
   cursor: pointer;
+}
+
+.accordionBlockActions button:disabled {
+  opacity: .35;
+  cursor: default;
 }
 
 /* ── Handles sobrepostos ── */
