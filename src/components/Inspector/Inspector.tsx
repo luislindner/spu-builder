@@ -3,6 +3,7 @@ import { lbl, optLabel } from './labels';
 import { ListEditor, FieldControl } from './ListEditor';
 import { SlotField } from './SlotField';
 import { TableEditor } from './TableEditor';
+import { TokenColorControl } from './TokenColorControl';
 import styles from './Inspector.module.css';
 
 const isSlotKey = (k: string) => k === 'slot' || k.endsWith('Slot');
@@ -29,6 +30,23 @@ const KNOWN_ENUMS: Record<string, string[]> = {
 const MULTILINE = new Set(['children', 'body', 'html', 'content']);
 // Props ocultas no painel (geridas em outro lugar).
 const HIDDEN = new Set(['children', 'src', '__pageBreakBefore']);
+
+function cleanManualRichFormatting(value: unknown): unknown {
+  if (typeof value === 'string') {
+    if (!/<span\b/i.test(value)) return value;
+    const template = document.createElement('template');
+    template.innerHTML = value;
+    template.content.querySelectorAll('span:not([data-term])').forEach((span) => {
+      span.replaceWith(...Array.from(span.childNodes));
+    });
+    return template.innerHTML;
+  }
+  if (Array.isArray(value)) return value.map(cleanManualRichFormatting);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, current]) => [key, cleanManualRichFormatting(current)]));
+  }
+  return value;
+}
 
 export function Inspector({ ns, block, onPatch }: Props) {
   const { BlockRegistry, BuilderManifest, Editable, IconGallery } = ns;
@@ -73,16 +91,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
   const accentField = (key: string) => (
     <div className={styles.field} key={key}>
       <label className={styles.label}>{labelFor(key)}</label>
-      <select
-        className={styles.select}
-        value={(props[key] as string) ?? ''}
-        onChange={(e) => patch({ [key]: e.target.value })}
-      >
-        <option value="">padrão</option>
-        {BuilderManifest.accents.map(a => (
-          <option key={a.key} value={a.value}>{a.label}</option>
-        ))}
-      </select>
+      <TokenColorControl value={(props[key] as string) || ''} onChange={(value) => patch({ [key]: value })} />
     </div>
   );
 
@@ -156,7 +165,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
     ...propFieldKeys,
     ...(def.itemsKey ? [def.itemsKey] : []),
     'icon', 'kickerIcon', 'color', 'tone', 'level',
-    'width', 'surface', 'pad',
+    'width', 'surface', 'pad', '__pullUp', '__pullDown',
   ]);
 
   const styleProps = Object.keys(props).filter(k => !covered.has(k) && !HIDDEN.has(k) && !(block.type === 'bleedimage' && k === 'zoom'));
@@ -166,7 +175,11 @@ export function Inspector({ ns, block, onPatch }: Props) {
     return (
       <div className={styles.field} key={f.key}>
         <label className={styles.label}>{f.label || labelFor(f.key)}</label>
-        <FieldControl ns={ns} field={f} value={(props[f.key] as never) ?? null} onChange={(v) => patch({ [f.key]: v })} />
+        {['color', 'accent', 'bg', 'overlayBg'].includes(f.key) ? (
+          <TokenColorControl value={(props[f.key] as string) || ''} onChange={(value) => patch({ [f.key]: value })} />
+        ) : (
+          <FieldControl ns={ns} field={f} value={(props[f.key] as never) ?? null} onChange={(v) => patch({ [f.key]: v })} />
+        )}
       </div>
     );
   };
@@ -185,6 +198,36 @@ export function Inspector({ ns, block, onPatch }: Props) {
           checked={!!props.__pageBreakBefore}
           onChange={(e) => patch({ __pageBreakBefore: e.target.checked })}
         />
+      </div>
+
+      <div className={styles.field}>
+        <label className={styles.label}>Aproximação entre blocos</label>
+        <label className={styles.compactToggle}>
+          <input
+            type="checkbox"
+            checked={!!props.__pullUp}
+            onChange={(e) => patch({ __pullUp: e.target.checked })}
+          />
+          Ignorar espaço acima
+        </label>
+        <label className={styles.compactToggle}>
+          <input
+            type="checkbox"
+            checked={!!props.__pullDown}
+            onChange={(e) => patch({ __pullDown: e.target.checked })}
+          />
+          Ignorar espaço abaixo
+        </label>
+      </div>
+
+      <div className={styles.field}>
+        <button
+          type="button"
+          className={styles.cleanFormatBtn}
+          onClick={() => patch(cleanManualRichFormatting(props) as Record<string, unknown>)}
+        >
+          Limpar formatação manual deste bloco
+        </button>
       </div>
 
       {block.type === 'datatable' && (

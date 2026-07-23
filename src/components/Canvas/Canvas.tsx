@@ -31,7 +31,7 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
   const def: BlockDef | undefined = ns.BlockRegistry.byType[block.type];
   const isContainer = def?.kind === 'container';
   const isSelected = selectedId === block.id;
-  const isCompactSubheading = block.type === 'titulo' && ['h3', 'h4'].includes(String(block.props.level || ''));
+  const isCompactSubheading = block.type === 'titulo' && ['h3', 'h4', 'h5', 'h6'].includes(String(block.props.level || ''));
   const insertTypes = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
   const insertAfter = (
     <InsertBlockButton
@@ -47,6 +47,7 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.3 : 1,
+    ...blockSpacingStyle(block),
   };
 
   const handles = (label?: string) => isSelected && (
@@ -385,10 +386,90 @@ function EditableLeaf({ block, def, ...cb }: NodeCallbacks & { block: Block; def
     return <EditableAccordion block={block} def={def} {...cb} />;
   }
 
+  if (block.type === 'timeline') {
+    return <EditableTimeline block={block} def={def} {...cb} />;
+  }
+
   const Comp = ns[def.component] as React.ComponentType<Record<string, unknown>> | undefined;
   if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
 
   return React.createElement(Comp, editableLeafProps(block, def, cb));
+}
+
+function blockSpacingStyle(block: Block): React.CSSProperties {
+  return {
+    ...(block.props.__pullUp ? { marginTop: 'calc(-1 * var(--flow-block))' } : null),
+    ...(block.props.__pullDown ? { marginBottom: 'calc(-1 * var(--flow-block))' } : null),
+  };
+}
+
+function EmbeddedBlocksEditor({ blocks, onChange, ...cb }: NodeCallbacks & {
+  blocks: Block[];
+  onChange: (blocks: Block[]) => void;
+}) {
+  const allowedTypes = cb.ns.BlockRegistry.childTypes.filter((type) => !['accordion', 'timeline'].includes(type));
+  const move = (from: number, to: number) => {
+    if (to < 0 || to >= blocks.length) return;
+    const reordered = blocks.slice();
+    const [moving] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moving);
+    onChange(reordered);
+  };
+
+  return (
+    <div className={styles.embeddedBlocks} onClick={(event) => event.stopPropagation()}>
+      {blocks.map((nested, nestedIndex) => {
+        const nestedDef = cb.ns.BlockRegistry.byType[nested.type];
+        const patchNested = (patch: Record<string, unknown>) => onChange(blocks.map((candidate) => (
+          candidate.id === nested.id ? { ...candidate, props: { ...candidate.props, ...patch } } : candidate
+        )));
+        return (
+          <div
+            className={`${styles.embeddedBlock}${cb.selectedId === nested.id ? ` ${styles.embeddedBlockSelected}` : ''}`}
+            key={nested.id}
+            style={blockSpacingStyle(nested)}
+            onClick={(event) => {
+              event.stopPropagation();
+              cb.onSelect(nested.id);
+            }}
+          >
+            <div className={styles.embeddedBlockActions}>
+              <button
+                className={nested.props.__pullUp ? styles.activeSpacing : undefined}
+                onClick={() => patchNested({ __pullUp: !nested.props.__pullUp })}
+                title="Ignorar espaço acima"
+                aria-pressed={!!nested.props.__pullUp}
+              >↥</button>
+              <button
+                className={nested.props.__pullDown ? styles.activeSpacing : undefined}
+                onClick={() => patchNested({ __pullDown: !nested.props.__pullDown })}
+                title="Ignorar espaço abaixo"
+                aria-pressed={!!nested.props.__pullDown}
+              >↧</button>
+              <button onClick={() => move(nestedIndex, nestedIndex - 1)} disabled={nestedIndex === 0} title="Mover bloco para cima">↑</button>
+              <button onClick={() => move(nestedIndex, nestedIndex + 1)} disabled={nestedIndex === blocks.length - 1} title="Mover bloco para baixo">↓</button>
+              <button onClick={() => onChange(blocks.filter((_, index) => index !== nestedIndex))} title="Remover bloco">✕</button>
+            </div>
+            <EditableLeaf
+              {...cb}
+              block={nested}
+              def={nestedDef}
+              onInlineEdit={(_, patch) => patchNested(patch)}
+            />
+          </div>
+        );
+      })}
+      <InsertBlockButton
+        ns={cb.ns}
+        allowedTypes={allowedTypes}
+        embedded
+        onInsert={(type) => {
+          const nested = cb.ns.BlockRegistry.newBlock(type);
+          if (nested) onChange([...blocks, prepareBlock(nested)]);
+        }}
+      />
+    </div>
+  );
 }
 
 function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block; def: BlockDef }) {
@@ -397,16 +478,8 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
   if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
 
   const sourceItems = Array.isArray(block.props.items) ? block.props.items : [];
-  const allowedTypes = ns.BlockRegistry.childTypes.filter((type) => type !== 'accordion');
   const updateBlocks = (itemIndex: number, blocks: Block[]) => {
     cb.onInlineEdit(block, { items: replaceAtPath(sourceItems, [itemIndex, 'blocks'], blocks) });
-  };
-  const moveBlock = (itemIndex: number, blocks: Block[], from: number, to: number) => {
-    if (to < 0 || to >= blocks.length) return;
-    const reordered = blocks.slice();
-    const [moving] = reordered.splice(from, 1);
-    reordered.splice(to, 0, moving);
-    updateBlocks(itemIndex, reordered);
   };
 
   const items = sourceItems.map((source, itemIndex) => {
@@ -418,45 +491,7 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
     const sourceObject = source as Record<string, unknown>;
     const editableObject = editable as Record<string, unknown>;
     const blocks = Array.isArray(sourceObject.blocks) ? sourceObject.blocks as Block[] : [];
-    const nestedEditor = (
-      <div className={styles.accordionBlocks} onClick={(event) => event.stopPropagation()}>
-        {blocks.map((nested, nestedIndex) => (
-          <div className={styles.accordionBlock} key={nested.id}>
-            <div className={styles.accordionBlockActions}>
-              <button
-                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex - 1)}
-                disabled={nestedIndex === 0}
-                title="Mover bloco para cima"
-                aria-label="Mover bloco para cima"
-              >↑</button>
-              <button
-                onClick={() => moveBlock(itemIndex, blocks, nestedIndex, nestedIndex + 1)}
-                disabled={nestedIndex === blocks.length - 1}
-                title="Mover bloco para baixo"
-                aria-label="Mover bloco para baixo"
-              >↓</button>
-              <button onClick={() => updateBlocks(itemIndex, blocks.filter((_, index) => index !== nestedIndex))} title="Remover bloco">✕</button>
-            </div>
-            <ns.BlockView
-              block={nested}
-              mode="edit"
-              onEdit={(edited, patch) => updateBlocks(itemIndex, blocks.map((candidate) => (
-                candidate.id === edited.id ? { ...candidate, props: { ...candidate.props, ...patch } } : candidate
-              )))}
-            />
-          </div>
-        ))}
-        <InsertBlockButton
-          ns={ns}
-          allowedTypes={allowedTypes}
-          embedded
-          onInsert={(type) => {
-            const nested = ns.BlockRegistry.newBlock(type);
-            if (nested) updateBlocks(itemIndex, [...blocks, prepareBlock(nested)]);
-          }}
-        />
-      </div>
-    );
+    const nestedEditor = <EmbeddedBlocksEditor {...cb} blocks={blocks} onChange={(next) => updateBlocks(itemIndex, next)} />;
 
     return {
       ...editableObject,
@@ -471,6 +506,53 @@ function EditableAccordion({ block, def, ...cb }: NodeCallbacks & { block: Block
   });
 
   return React.createElement(Comp, { ...block.props, items });
+}
+
+function EditableTimeline({ block, def, ...cb }: NodeCallbacks & { block: Block; def: BlockDef }) {
+  const { ns } = cb;
+  const Comp = ns[def.component as string] as React.ComponentType<Record<string, unknown>> | undefined;
+  if (!Comp) return <ns.BlockView block={block} mode="edit" onEdit={cb.onInlineEdit} />;
+
+  const sourceEras = Array.isArray(block.props.eras) ? block.props.eras : [];
+  const eras = sourceEras.map((sourceEra, eraIndex) => {
+    const editableEra = editableItemValue(sourceEra, def.itemFields || [], block, cb, 'eras', [eraIndex]);
+    if (!sourceEra || typeof sourceEra !== 'object' || Array.isArray(sourceEra)
+      || !editableEra || typeof editableEra !== 'object' || Array.isArray(editableEra)) return editableEra;
+
+    const sourceMilestones = Array.isArray((sourceEra as Record<string, unknown>).milestones)
+      ? (sourceEra as Record<string, unknown>).milestones as unknown[]
+      : [];
+    const editableMilestones = Array.isArray((editableEra as Record<string, unknown>).milestones)
+      ? (editableEra as Record<string, unknown>).milestones as unknown[]
+      : [];
+
+    return {
+      ...(editableEra as Record<string, unknown>),
+      milestones: editableMilestones.map((editableMilestone, milestoneIndex) => {
+        const sourceMilestone = sourceMilestones[milestoneIndex];
+        if (!sourceMilestone || typeof sourceMilestone !== 'object' || Array.isArray(sourceMilestone)
+          || !editableMilestone || typeof editableMilestone !== 'object' || Array.isArray(editableMilestone)) return editableMilestone;
+        const sourceObject = sourceMilestone as Record<string, unknown>;
+        const editableObject = editableMilestone as Record<string, unknown>;
+        const blocks = Array.isArray(sourceObject.blocks) ? sourceObject.blocks as Block[] : [];
+        const updateBlocks = (next: Block[]) => cb.onInlineEdit(block, {
+          eras: replaceAtPath(sourceEras, [eraIndex, 'milestones', milestoneIndex, 'blocks'], next),
+        });
+        return {
+          ...editableObject,
+          blocks: undefined,
+          content: (
+            <>
+              {editableObject.content}
+              <EmbeddedBlocksEditor {...cb} blocks={blocks} onChange={updateBlocks} />
+            </>
+          ),
+        };
+      }),
+    };
+  });
+
+  return React.createElement(Comp, { ...block.props, eras });
 }
 
 function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {

@@ -14,6 +14,7 @@ import App from './App.tsx'
 const SLOT_FILE = '.image-slots.state.json'
 const SLOT_KEY = 'spu_image_slots'
 const DS_BASE = `${import.meta.env.BASE_URL}ds/`
+const DS_BUNDLE_VERSION = '2026-07-23.2'
 ;(window as unknown as Record<string, unknown>).omelette = {
   writeFile: (name: string, content: string) => {
     if (typeof name === 'string' && name.endsWith(SLOT_FILE)) {
@@ -43,7 +44,7 @@ function loadScript(src: string) {
   })
 }
 
-loadScript(`${DS_BASE}_ds_bundle.js`).catch(console.error)
+loadScript(`${DS_BASE}_ds_bundle.js?v=${DS_BUNDLE_VERSION}`).catch(console.error)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

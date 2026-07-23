@@ -36,7 +36,7 @@
   margin-bottom: calc(-1 * var(--flow-block) + var(--space-2));
 }
 
-/* H3/H4 da pilha principal pertencem ao conteúdo seguinte. O seletor direto
+/* H3–H6 da pilha principal pertencem ao conteúdo seguinte. O seletor direto
    impede que o ajuste alcance títulos internos de painéis, colunas e recursos. */
 .containerWrap[data-block-type='section']
   > :global(.spu-section)
@@ -133,7 +133,7 @@
   opacity: 0.7;
 }
 
-.accordionBlocks {
+.embeddedBlocks {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -142,7 +142,7 @@
   border-top: 1px dashed var(--color-border);
 }
 
-.accordionBlock {
+.embeddedBlock {
   position: relative;
   padding: var(--space-3);
   border: 1px solid var(--color-border);
@@ -150,7 +150,12 @@
   background: var(--color-surface);
 }
 
-.accordionBlockActions {
+.embeddedBlockSelected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-soft);
+}
+
+.embeddedBlockActions {
   position: absolute;
   top: var(--space-1);
   right: var(--space-1);
@@ -159,7 +164,7 @@
   gap: var(--space-1);
 }
 
-.accordionBlockActions button {
+.embeddedBlockActions button {
   width: 25px;
   height: 25px;
   border: 1px solid var(--color-border);
@@ -169,9 +174,15 @@
   cursor: pointer;
 }
 
-.accordionBlockActions button:disabled {
+.embeddedBlockActions button:disabled {
   opacity: .35;
   cursor: default;
+}
+
+.embeddedBlockActions .activeSpacing {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
 }
 
 /* ── Handles sobrepostos ── */

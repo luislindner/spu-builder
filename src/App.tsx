@@ -23,12 +23,12 @@ import { Inspector } from './components/Inspector/Inspector';
 import { Toolbar } from './components/Toolbar/Toolbar';
 import { PreviewModal } from './components/Preview/PreviewModal';
 import { PrintPreviewModal } from './components/PrintPreview/PrintPreviewModal';
-import { QualityPanel } from './components/QualityPanel/QualityPanel';
 import { normalizeProjectContent } from './utils/projectCompat';
 import type { Block } from './types/ds';
 import styles from './App.module.css';
 
 const AUTOSAVE_KEY = 'spu_builder_doc';
+const SLOT_KEY = 'spu_image_slots';
 type DropTarget = { parentId: string | null; index: number };
 
 class AppErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
@@ -317,8 +317,13 @@ export default function App() {
   };
   const handleClearDoc = () => {
     if (!ns) return;
-    dispatch({ type: 'SET_DOC', doc: ns.BuilderExport.newDoc({ title: state.doc.meta.title || 'Rascunho' }) });
+    localStorage.removeItem(AUTOSAVE_KEY);
+    localStorage.removeItem(SLOT_KEY);
+    dispatch({ type: 'SET_DOC', doc: ns.BuilderExport.newDoc({ title: 'Rascunho' }) });
     setSelectedId(null);
+    // Garante que uma gravação pendente de um image-slot desmontado não
+    // restaure o sidecar antigo no mesmo ciclo de renderização.
+    window.setTimeout(() => localStorage.removeItem(SLOT_KEY), 0);
   };
 
   return (
@@ -365,7 +370,6 @@ export default function App() {
               block={selectedBlock}
               onPatch={handlePatch}
             />
-            <QualityPanel doc={state.doc} />
           </div>
         </div>
       </div>

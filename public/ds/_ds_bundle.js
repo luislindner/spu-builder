@@ -1589,6 +1589,17 @@ const BLOCKS = [
     key: 'accent',
     label: 'Cor do conjunto de ícones',
     type: 'accent'
+  }, {
+    key: 'layout',
+    label: 'Posição do ícone',
+    type: 'select',
+    options: [{
+      value: 'top',
+      label: 'Acima do conteúdo'
+    }, {
+      value: 'side',
+      label: 'À esquerda do conteúdo'
+    }]
   }],
   itemFields: [{
     key: 'icon',
@@ -1609,6 +1620,7 @@ const BLOCKS = [
     columns: 3,
     card: true,
     accent: '',
+    layout: 'top',
     items: [{
       icon: 'building',
       title: 'Título',
@@ -1695,11 +1707,6 @@ const BLOCKS = [
     label: 'Resposta',
     type: 'rich'
   }, {
-    key: 'imageSlot',
-    label: 'Imagem (opcional)',
-    type: 'slot',
-    optional: true
-  }, {
     key: 'linkHref',
     label: 'Link (opcional)',
     type: 'text',
@@ -1773,11 +1780,6 @@ const BLOCKS = [
       key: 'content',
       label: 'Descrição',
       type: 'rich'
-    }, {
-      key: 'imageSlot',
-      label: 'Imagem (opcional)',
-      type: 'slot',
-      optional: true
     }, {
       key: 'linkHref',
       label: 'Link (opcional)',
@@ -2481,7 +2483,26 @@ const SPU_MARKS = {
     id: 'green-light',
     label: 'Verde claro',
     swatch: 'var(--green-400)'
-  }]
+  }],
+  fonts: [
+    { id: 'display', label: 'Display' },
+    { id: 'body', label: 'Corpo' },
+    { id: 'serif', label: 'Serifada' },
+    { id: 'mono', label: 'Monoespaçada' }
+  ],
+  sizes: [
+    { id: 'display', label: 'Display' },
+    { id: 'h2', label: 'H2' },
+    { id: 'h3', label: 'H3' },
+    { id: 'h4', label: 'H4' },
+    { id: 'h5', label: 'H5' },
+    { id: 'h6', label: 'H6' },
+    { id: 'body-lg', label: 'Corpo grande' },
+    { id: 'body', label: 'Corpo' },
+    { id: 'small', label: 'Pequeno' },
+    { id: 'caption', label: 'Legenda' },
+    { id: 'eyebrow', label: 'Eyebrow' }
+  ]
 };
 __ds_scope.injectCss('spu-editable-css', `
 [data-spu-editable]{outline:none;cursor:text;border-radius:var(--radius-sm)}
@@ -2506,6 +2527,9 @@ __ds_scope.injectCss('spu-editable-css', `
 .spu-mtpop__btns button{flex:1;border:0;border-radius:7px;padding:7px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.14);color:#fff}
 .spu-mtpop__btns button.is-primary{background:var(--color-accent,#c2613a);color:#fff}
 .spu-mtpop__btns button:hover{filter:brightness(1.12)}
+.spu-mtpop__list{display:flex;flex-direction:column;min-width:170px;max-height:min(330px,60vh);overflow:auto}
+.spu-mtpop__list button{border:0;background:transparent;color:#fff;text-align:left;padding:7px 9px;border-radius:7px;cursor:pointer;font:inherit;font-size:12px}
+.spu-mtpop__list button:hover{background:rgba(255,255,255,.16)}
 `);
 
 // ── helpers de seleção ──
@@ -2638,6 +2662,16 @@ function applyColor(id) {
     'data-color': id
   }, `span[data-color="${id}"]`);
 }
+function applyFont(id) {
+  wrapSelection('span', {
+    'data-font': id
+  }, `span[data-font="${id}"]`);
+}
+function applyFontSize(id) {
+  wrapSelection('span', {
+    'data-fs': id
+  }, `span[data-fs="${id}"]`);
+}
 function applyEmphasis(cmd) {
   document.execCommand(cmd, false, null);
   const sel = window.getSelection();
@@ -2702,7 +2736,7 @@ function clearMarks() {
   if (!host) return;
   const tmp = document.createElement('div');
   tmp.appendChild(range.cloneContents());
-  tmp.querySelectorAll('mark, [data-color], [data-term], b, strong, i, em, a').forEach(unwrap);
+  tmp.querySelectorAll('span:not([data-term]), mark, [data-color], [data-font], [data-fs], [data-term], b, strong, i, em, a').forEach(unwrap);
   range.deleteContents();
   range.insertNode(document.createRange().createContextualFragment(tmp.innerHTML));
   sel.removeAllRanges();
@@ -2770,7 +2804,7 @@ function MarkToolbar({
   linkButtons = true
 }) {
   const [box, setBox] = React.useState(null);
-  const [menu, setMenu] = React.useState(null); // 'hl' | 'color' | 'link' | null
+  const [menu, setMenu] = React.useState(null); // 'hl' | 'color' | 'font' | 'size' | 'link' | null
   const savedRange = React.useRef(null);
   const [linkUrl, setLinkUrl] = React.useState('https://');
   React.useEffect(() => {
@@ -2883,6 +2917,21 @@ function MarkToolbar({
       height: 16
     }
   })))));
+  const optionMenu = (which, items, apply) => menu === which && React.createElement('div', {
+    className: 'spu-mtpop',
+    style: {
+      top: box.top + 38,
+      left: box.left
+    },
+    onMouseDown: e => e.preventDefault()
+  }, React.createElement('div', {
+    className: 'spu-mtpop__list'
+  }, items.map(item => React.createElement('button', {
+    key: item.id,
+    onClick: () => run(() => apply(item.id))
+  }, item.label))));
+  const popFont = optionMenu('font', SPU_MARKS.fonts, applyFont);
+  const popSize = optionMenu('size', SPU_MARKS.sizes, applyFontSize);
   const popLink = menu === 'link' && React.createElement('div', {
     className: 'spu-mtpop',
     style: {
@@ -2938,6 +2987,13 @@ function MarkToolbar({
     style: {
       fontWeight: 700
     }
+  }), btn('font', 'Família tipográfica', ['F', caret], () => openMenu('font'), {
+    className: menu === 'font' ? 'is-open' : undefined
+  }), btn('size', 'Tamanho do texto', ['Aa', caret], () => openMenu('size'), {
+    className: menu === 'size' ? 'is-open' : undefined,
+    style: {
+      fontSize: 11
+    }
   }), lists && box.allowLists && sep('s3'), lists && box.allowLists && btn('ul', 'Lista', '•', () => applyEmphasis('insertUnorderedList')), lists && box.allowLists && btn('ol', 'Lista numerada', '1.', () => applyEmphasis('insertOrderedList')), (links || glossary) && sep('s4'), links && btn('a', 'Link', ['🔗', caret], () => openMenu('link'), {
     className: menu === 'link' ? 'is-open' : undefined
   }), glossary && btn('t', 'Termo de glossário', 'termo', applyTerm, {
@@ -2945,10 +3001,10 @@ function MarkToolbar({
       borderBottom: '1.5px dotted #fff',
       fontSize: 12
     }
-  }), sep('s5'), btn('x', 'Limpar marcas', '✕', clearMarks)]);
-  return React.createElement(React.Fragment, null, bar, popHL, popColor, popLink);
+  }), sep('s5'), btn('x', 'Limpar formatação da seleção', '✕', clearMarks)]);
+  return React.createElement(React.Fragment, null, bar, popHL, popColor, popFont, popSize, popLink);
 }
-Object.assign(__ds_scope, { SPU_MARKS, applyHighlight, applyColor, applyEmphasis, applyLink, applyTerm, clearMarks, Editable, MarkToolbar });
+Object.assign(__ds_scope, { SPU_MARKS, applyHighlight, applyColor, applyFont, applyFontSize, applyEmphasis, applyLink, applyTerm, clearMarks, Editable, MarkToolbar });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/Editable.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/LicenseBadge.jsx
@@ -4339,6 +4395,22 @@ __ds_scope.injectCss('spu-richtext-css', `
 .spu-richtext [data-color="terra-light"]{color:var(--terra-300)}
 .spu-richtext [data-color="petrol-light"]{color:var(--petrol-300)}
 .spu-richtext [data-color="green-light"]{color:var(--green-400)}
+/* Família e tamanho aplicáveis a trechos selecionados. */
+.spu-richtext [data-font="display"]{font-family:var(--font-display)}
+.spu-richtext [data-font="body"]{font-family:var(--font-body)}
+.spu-richtext [data-font="serif"]{font-family:var(--font-serif)}
+.spu-richtext [data-font="mono"]{font-family:var(--font-mono)}
+.spu-richtext [data-fs="eyebrow"]{font-size:var(--fs-eyebrow)}
+.spu-richtext [data-fs="caption"]{font-size:var(--fs-caption)}
+.spu-richtext [data-fs="small"]{font-size:var(--fs-small)}
+.spu-richtext [data-fs="body"]{font-size:var(--fs-body)}
+.spu-richtext [data-fs="body-lg"]{font-size:var(--fs-body-lg)}
+.spu-richtext [data-fs="h6"]{font-size:var(--fs-h6)}
+.spu-richtext [data-fs="h5"]{font-size:var(--fs-h5)}
+.spu-richtext [data-fs="h4"]{font-size:var(--fs-h4)}
+.spu-richtext [data-fs="h3"]{font-size:var(--fs-h3)}
+.spu-richtext [data-fs="h2"]{font-size:var(--fs-h2)}
+.spu-richtext [data-fs="display"]{font-size:var(--fs-display);line-height:var(--lh-tight)}
 /* Termo de glossário (marcação) */
 .spu-richtext [data-term]{text-decoration:underline dotted;text-underline-offset:.2em;text-decoration-color:var(--color-primary);cursor:help}
 /* Variante inline (campos de uma linha: legenda, título) */
@@ -4753,12 +4825,17 @@ __ds_scope.injectCss('spu-features-css', `
 .spu-feature__title{font-family:var(--font-display);font-weight:700;font-size:var(--fs-h6);line-height:1.25;margin:0 0 .3em;color:var(--text-strong)}
 .spu-feature__text{color:var(--text-muted);font-size:var(--fs-small);margin:0}
 .spu-feature--card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-5);box-shadow:var(--shadow-sm)}
+.spu-feature--side{display:grid;grid-template-columns:48px minmax(0,1fr);column-gap:var(--space-4);align-items:start}
+.spu-feature--side .spu-feature__icon{grid-row:1 / span 2;margin-bottom:0}
+.spu-feature--side .spu-feature__title{grid-column:2}
+.spu-feature--side .spu-feature__text{grid-column:2}
 `);
 function FeatureGrid({
   items = [],
   columns,
   card = false,
   accent,
+  layout = 'top',
   className,
   style
 }) {
@@ -4775,7 +4852,7 @@ function FeatureGrid({
     style: gridStyle
   }, items.map((it, i) => React.createElement('div', {
     key: i,
-    className: __ds_scope.cx('spu-feature', card && 'spu-feature--card')
+    className: __ds_scope.cx('spu-feature', card && 'spu-feature--card', layout === 'side' && 'spu-feature--side')
   }, React.createElement('div', {
     className: 'spu-feature__icon',
     style: accent ? {
@@ -4987,7 +5064,10 @@ __ds_scope.injectCss('spu-panel-css', `
 .spu-panel__body{color:var(--text-body)}
 .spu-panel__body+:where(.spu-blockstack){margin-top:var(--space-5)}
 .spu-panel>:last-child{margin-bottom:0}
-.spu-panel--accent{border-left:var(--border-accent) solid var(--_pc, var(--color-accent))}
+.spu-panel--accent{--_panel-accent:var(--_pc,var(--color-accent));background:color-mix(in srgb,var(--_panel-accent) 9%,var(--color-surface));background-image:none;border-color:color-mix(in srgb,var(--_panel-accent) 30%,var(--color-border));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--_panel-accent) 10%,transparent)}
+.spu-panel--colored .spu-panel__kicker{color:var(--_pc,var(--color-accent))}
+.spu-panel--colored .spu-panel__kicker .spu-kicker__rule{background:var(--_pc,var(--color-accent))}
+.spu-panel--colored .spu-panel__title{color:color-mix(in srgb,var(--_pc,var(--color-accent)) 78%,var(--text-strong))}
 /* Card que extravasa a coluna de leitura (mais largo, centrado na viewport) */
 .spu-panel--wide{width:min(var(--container-wide), calc(100vw - 2 * var(--gutter)));margin-left:50%;transform:translateX(-50%)}
 /* Faixa full-bleed — largura total (como o hero) */
@@ -5025,7 +5105,7 @@ function Panel({
   }, __ds_scope.renderRich(body)), __ds_scope.renderRich(children)];
   if (variant === 'feature') {
     return React.createElement('div', {
-      className: __ds_scope.cx('spu-panel', 'spu-panel--feature', color && 'spu-panel--accent', className),
+      className: __ds_scope.cx('spu-panel', 'spu-panel--feature', color && 'spu-panel--colored', className),
       style: {
         ...(color ? {
           '--_pc': color
@@ -5038,7 +5118,7 @@ function Panel({
     }, inner));
   }
   return React.createElement('div', {
-    className: __ds_scope.cx('spu-panel', wide && 'spu-panel--wide', color && 'spu-panel--accent', className),
+    className: __ds_scope.cx('spu-panel', wide && 'spu-panel--wide', variant === 'accent' && 'spu-panel--accent', (color || variant === 'accent') && 'spu-panel--colored', className),
     style: {
       ...(color ? {
         '--_pc': color
@@ -5166,6 +5246,17 @@ function BlockView({
     }
   }, `Bloco desconhecido: ${block.type}`);
   const props = block.props || {};
+  const spacingStyle = {
+    ...(props.style || {}),
+    ...(props.__pullUp ? { marginTop: 'calc(-1 * var(--flow-block))' } : null),
+    ...(props.__pullDown ? { marginBottom: 'calc(-1 * var(--flow-block))' } : null)
+  };
+  const componentProps = {
+    ...props,
+    style: spacingStyle
+  };
+  delete componentProps.__pullUp;
+  delete componentProps.__pullDown;
   const editing = mode === 'edit';
   const emit = patch => onEdit && onEdit(block, patch);
 
@@ -5192,7 +5283,8 @@ function BlockView({
     const tag = props.level || 'h2';
     return React.createElement(tag, {
       id: block.id,
-      className: 'spu-block-title'
+      className: 'spu-block-title',
+      style: spacingStyle
     }, editing ? React.createElement(__ds_scope.Editable, {
       html: props.text || '',
       single: true,
@@ -5210,11 +5302,13 @@ function BlockView({
   if (block.type === 'prose') {
     return editing ? React.createElement(__ds_scope.Editable, {
       html: typeof props.html === 'string' ? props.html : '',
+      style: spacingStyle,
       onChange: h => emit({
         html: h
       })
     }) : React.createElement(__ds_scope.RichText, {
-      html: typeof props.html === 'string' ? props.html : undefined
+      html: typeof props.html === 'string' ? props.html : undefined,
+      style: spacingStyle
     });
   }
   const NS = dsNamespace();
@@ -5239,14 +5333,14 @@ function BlockView({
     if (def.stack === false) {
       // Columns/grade: filhos vão direto como children do componente.
       return React.createElement(Comp, {
-        ...props,
+        ...componentProps,
         ...extra,
         children: undefined
       }, kids);
     }
     const hasKids = (block.children || []).length > 0;
     return React.createElement(Comp, {
-      ...props,
+      ...componentProps,
       ...extra,
       children: undefined
     }, hasKids && React.createElement('div', {
@@ -5261,7 +5355,7 @@ function BlockView({
 
   // —— Demais blocos ——
   const resolved = {
-    ...props
+    ...componentProps
   };
   if (block.type === 'kicker') {
     resolved.className = __ds_scope.cx(props.className, 'spu-block-kicker');
@@ -6026,7 +6120,7 @@ __ds_scope.injectCss('spu-section-css', `
 .spu-blockstack.spu-blockstack>*:not(.spu-block-title):not(.spu-block-kicker){margin-block:0}
 .spu-block-title{margin:0}
 .spu-block-title .spu-richtext{line-height:inherit}
-.spu-section__inner>.spu-blockstack>.spu-block-title:is(h3,h4):not(:last-child){margin-bottom:calc(-1 * var(--flow-block) + var(--space-3))}
+.spu-section__inner>.spu-blockstack>.spu-block-title:is(h3,h4,h5,h6):not(:last-child){margin-bottom:calc(-1 * var(--flow-block) + var(--space-3))}
 .spu-section__inner{margin-inline:auto;padding-inline:var(--gutter)}
 .spu-section--narrow .spu-section__inner{max-width:var(--container-prose)}
 .spu-section--content .spu-section__inner{max-width:var(--container-content)}

@@ -35,7 +35,8 @@ const BUILDER_EXPORT_CSS = `
 .spu-block-title .spu-richtext { line-height: inherit; }
 .spu-content-slider__title .spu-richtext { line-height: inherit; }
 .spu-conclusion .spu-richtext :is(strong, b) { color: inherit; }
-.spu-accordion-blocks { display:flex; flex-direction:column; gap:var(--flow-block); margin-top:var(--space-5); }
+.spu-accordion-blocks,
+.spu-embedded-blocks { display:flex; flex-direction:column; gap:var(--flow-block); margin-top:var(--space-5); }
 .spu-richtext [data-term] {
   position: relative;
   display: inline-block;
@@ -236,17 +237,6 @@ const DS_COMPAT_JS = `
         .replace(/<\\/p>\\s*<\\/p>/gi, '</p>')
         .replace(/<p>\\s*<br\\s*\\/?>\\s*<\\/p>/gi, '<p><br></p>');
     }
-    var Editable = NS.Editable;
-    if(Editable){
-      NS.Editable = function(props){
-        props = props || {};
-        var onChange = props.onChange;
-        return React.createElement(Editable, Object.assign({}, props, {
-          html: normalizeWhitespace(props.html),
-          onChange: onChange ? function(value){ onChange(normalizeWhitespace(value)); } : undefined
-        }));
-      };
-    }
     var Masthead = NS.Masthead;
     if(Masthead){
       NS.Masthead = function(props){
@@ -322,6 +312,29 @@ const DS_COMPAT_JS = `
         return React.createElement(Accordion, Object.assign({}, props, { items:items }));
       };
     }
+    var Timeline = NS.Timeline;
+    if(Timeline){
+      NS.Timeline = function(props){
+        props = props || {};
+        var eras = Array.isArray(props.eras) ? props.eras.map(function(era){
+          if(!era || typeof era !== 'object' || Array.isArray(era) || !Array.isArray(era.milestones)) return era;
+          return Object.assign({}, era, {
+            milestones: era.milestones.map(function(milestone){
+              if(!milestone || typeof milestone !== 'object' || Array.isArray(milestone) || !Array.isArray(milestone.blocks) || !milestone.blocks.length) return milestone;
+              return Object.assign({}, milestone, {
+                content: React.createElement(React.Fragment, null,
+                  block(milestone.content),
+                  React.createElement('div', { className:'spu-embedded-blocks' }, milestone.blocks.map(function(nested, index){
+                    return React.createElement(NS.BlockView, { key:nested.id || index, block:nested, mode:'preview' });
+                  }))
+                )
+              });
+            })
+          });
+        }) : props.eras;
+        return React.createElement(Timeline, Object.assign({}, props, { eras:eras }));
+      };
+    }
     NS.__spuBuilderCompat = true;
   };
 })();`;
@@ -350,8 +363,35 @@ async function inlineCss(href: string, seen = new Set<string>()): Promise<string
 interface SlotVal { u?: string; s?: number; x?: number; y?: number }
 type Sidecar = Record<string, SlotVal | string>;
 
-function getSidecar(): Sidecar {
-  try { return JSON.parse(localStorage.getItem(SLOT_KEY) || '{}'); } catch { return {}; }
+function referencedSlotIds(doc: Doc): Set<string> {
+  const ids = new Set<string>();
+  const visit = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== 'object') return;
+    const object = value as Record<string, unknown>;
+    Object.entries(object).forEach(([key, current]) => {
+      if ((key === 'slot' || key.endsWith('Slot')) && typeof current === 'string') {
+        if (current && !(key === 'slot' && object.showImage === false)) ids.add(current);
+        return;
+      }
+      visit(current);
+    });
+  };
+  visit(doc.blocks);
+  return ids;
+}
+
+function getSidecar(doc: Doc): Sidecar {
+  try {
+    const all = JSON.parse(localStorage.getItem(SLOT_KEY) || '{}') as Sidecar;
+    const referenced = referencedSlotIds(doc);
+    return Object.fromEntries(Object.entries(all).filter(([id]) => referenced.has(id)));
+  } catch {
+    return {};
+  }
 }
 
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | null {
@@ -620,13 +660,13 @@ export async function exportSelfContained(doc: Doc) {
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const react = await getReactUMD();
   const lucide = await getDocumentLucideAssets(doc);
-  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar: getSidecar(), react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
+  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar: getSidecar(doc), react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   download(safe(doc.meta.title) + '.html', html, 'text/html;charset=utf-8');
 }
 
 // Extrai imagens do sidecar para arquivos e devolve sidecar com caminhos relativos.
-function externalizeImages(files: Record<string, Uint8Array>): Sidecar {
-  const src = getSidecar();
+function externalizeImages(files: Record<string, Uint8Array>, doc: Doc): Sidecar {
+  const src = getSidecar(doc);
   const out: Sidecar = {};
   let n = 0;
   for (const id of Object.keys(src)) {
@@ -650,7 +690,7 @@ export async function exportAssetsZip(doc: Doc) {
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = externalizeImages(files);
+  const sidecar = externalizeImages(files, doc);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 
@@ -714,7 +754,7 @@ export async function exportScormZip(doc: Doc) {
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = externalizeImages(files);
+  const sidecar = externalizeImages(files, doc);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 

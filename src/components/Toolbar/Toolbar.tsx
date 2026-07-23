@@ -202,7 +202,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
             <div className={styles.confirmIcon}>!</div>
             <div className={styles.confirmBody}>
               <h2 id="clear-title">Limpar página?</h2>
-              <p>Todos os blocos do canvas serão removidos e o rascunho salvo neste navegador será substituído por uma página vazia.</p>
+              <p>Todos os blocos, o título e o cache local de imagens serão removidos. O rascunho será substituído por uma página vazia.</p>
               <p>Baixe uma cópia do projeto em JSON antes de limpar se quiser guardar este estado.</p>
             </div>
             <div className={styles.confirmActions}>

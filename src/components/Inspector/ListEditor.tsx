@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { NS, FieldDef } from '../../types/ds';
 import { lbl } from './labels';
 import { SlotField } from './SlotField';
+import { TokenColorControl } from './TokenColorControl';
 import styles from './ListEditor.module.css';
 
 type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
@@ -70,12 +71,7 @@ export function FieldControl({ ns, field, value, onChange }: {
         </select>
       );
     case 'accent':
-      return (
-        <select className={styles.input} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)}>
-          <option value="">padrão</option>
-          {ns.BuilderManifest.accents.map((a) => <option key={a.key} value={a.value}>{a.label}</option>)}
-        </select>
-      );
+      return <TokenColorControl value={(value as string) || ''} onChange={onChange} />;
     case 'slot':
       return <SlotControl value={(value as string) || ''} onChange={onChange} />;
     case 'rich':

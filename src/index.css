@@ -124,7 +124,8 @@ button { font-family: inherit; }
   color: inherit;
 }
 
-.spu-accordion-blocks {
+.spu-accordion-blocks,
+.spu-embedded-blocks {
   display: flex;
   flex-direction: column;
   gap: var(--flow-block);

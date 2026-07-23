@@ -33,6 +33,39 @@ export function findBlock(blocks: Block[], id: string): Block | null {
       const f = findBlock(b.children, id);
       if (f) return f;
     }
+    const embedded = findEmbeddedBlock(b.props, id);
+    if (embedded) return embedded;
+  }
+  return null;
+}
+
+// Accordion e timeline guardam blocos dentro de props (items[].blocks e
+// eras[].milestones[].blocks). Eles também precisam participar da seleção e
+// das ações id-based do inspetor, embora não pertençam a block.children.
+function findEmbeddedBlock(value: unknown, id: string): Block | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findEmbeddedBlock(item, id);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (!value || typeof value !== 'object') return null;
+
+  const object = value as Record<string, unknown>;
+  if (typeof object.id === 'string' && typeof object.type === 'string' && object.props && typeof object.props === 'object') {
+    const block = object as unknown as Block;
+    if (block.id === id) return block;
+    if (block.children) {
+      const child = findBlock(block.children, id);
+      if (child) return child;
+    }
+    return findEmbeddedBlock(block.props, id);
+  }
+
+  for (const item of Object.values(object)) {
+    const found = findEmbeddedBlock(item, id);
+    if (found) return found;
   }
   return null;
 }

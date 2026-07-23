@@ -74,19 +74,6 @@ export function installDSCompat(ns: NS) {
     registry.mapfigure.fields = Array.from(new Set([...(registry.mapfigure.fields || []), 'caption', 'credit', 'label']));
   }
 
-  const Editable = ns.Editable as Component | undefined;
-  if (Editable) {
-    const SanitizedEditable = (props: Record<string, unknown>) => {
-      const onChange = props.onChange as ((value: string) => void) | undefined;
-      return React.createElement(Editable, {
-        ...props,
-        html: typeof props.html === 'string' ? normalizeEditorWhitespace(props.html) : props.html,
-        onChange: onChange ? (value: string) => onChange(normalizeEditorWhitespace(value)) : undefined,
-      });
-    };
-    ns.Editable = SanitizedEditable as unknown as typeof ns.Editable;
-  }
-
   Object.values(registry || {}).forEach((def) => {
     const richItemKeys = RICH_ITEM_FIELDS[def.type] || [];
     if (richItemKeys.length && def.itemFields) {
@@ -141,6 +128,40 @@ export function installDSCompat(ns: NS) {
         };
       }) : props.items;
       return React.createElement(Accordion, { ...props, items });
+    }) as Component;
+  }
+
+  const Timeline = ns.Timeline as Component | undefined;
+  if (Timeline) {
+    ns.Timeline = ((props: Record<string, unknown>) => {
+      const eras = Array.isArray(props.eras) ? props.eras.map((era) => {
+        if (!era || typeof era !== 'object' || Array.isArray(era)) return era;
+        const eraValue = era as Record<string, unknown>;
+        if (!Array.isArray(eraValue.milestones)) return eraValue;
+        return {
+          ...eraValue,
+          milestones: eraValue.milestones.map((milestone) => {
+            if (!milestone || typeof milestone !== 'object' || Array.isArray(milestone)) return milestone;
+            const value = milestone as Record<string, unknown>;
+            const blocks = Array.isArray(value.blocks) ? value.blocks : [];
+            if (!blocks.length) return value;
+            return {
+              ...value,
+              content: React.createElement(React.Fragment, null,
+                renderRichBlock(ns, value.content) as React.ReactNode,
+                React.createElement('div', { className: 'spu-embedded-blocks' },
+                  blocks.map((nested, index) => React.createElement(ns.BlockView, {
+                    key: (nested as { id?: string }).id || index,
+                    block: nested as never,
+                    mode: 'preview',
+                  })),
+                ),
+              ),
+            };
+          }),
+        };
+      }) : props.eras;
+      return React.createElement(Timeline, { ...props, eras });
     }) as Component;
   }
 
