@@ -11,11 +11,11 @@
 import { zipSync, strToU8 } from 'fflate';
 import type { Doc } from '../types/ds';
 import { getDocumentLucideAssets } from './lucideCatalog';
+import { readImageSlots } from './imageSlotStore';
 
 const DS_BASE = `${import.meta.env.BASE_URL}ds/`;
 const VENDOR_BASE = `${import.meta.env.BASE_URL}vendor/`;
 const SLOT_FILE = '.image-slots.state.json';
-const SLOT_KEY = 'spu_image_slots';
 const BUILDER_EXPORT_CSS = `
 .spu-figure__frame > image-slot {
   width: 100% !important;
@@ -384,9 +384,9 @@ function referencedSlotIds(doc: Doc): Set<string> {
   return ids;
 }
 
-function getSidecar(doc: Doc): Sidecar {
+async function getSidecar(doc: Doc): Promise<Sidecar> {
   try {
-    const all = JSON.parse(localStorage.getItem(SLOT_KEY) || '{}') as Sidecar;
+    const all = JSON.parse(await readImageSlots()) as Sidecar;
     const referenced = referencedSlotIds(doc);
     return Object.fromEntries(Object.entries(all).filter(([id]) => referenced.has(id)));
   } catch {
@@ -660,13 +660,14 @@ export async function exportSelfContained(doc: Doc) {
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const react = await getReactUMD();
   const lucide = await getDocumentLucideAssets(doc);
-  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar: getSidecar(doc), react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
+  const sidecar = await getSidecar(doc);
+  const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   download(safe(doc.meta.title) + '.html', html, 'text/html;charset=utf-8');
 }
 
 // Extrai imagens do sidecar para arquivos e devolve sidecar com caminhos relativos.
-function externalizeImages(files: Record<string, Uint8Array>, doc: Doc): Sidecar {
-  const src = getSidecar(doc);
+async function externalizeImages(files: Record<string, Uint8Array>, doc: Doc): Promise<Sidecar> {
+  const src = await getSidecar(doc);
   const out: Sidecar = {};
   let n = 0;
   for (const id of Object.keys(src)) {
@@ -690,7 +691,7 @@ export async function exportAssetsZip(doc: Doc) {
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = externalizeImages(files, doc);
+  const sidecar = await externalizeImages(files, doc);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 
@@ -754,7 +755,7 @@ export async function exportScormZip(doc: Doc) {
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = externalizeImages(files, doc);
+  const sidecar = await externalizeImages(files, doc);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 

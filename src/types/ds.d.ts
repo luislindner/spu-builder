@@ -130,5 +130,10 @@ export interface NS {
 declare global {
   interface Window {
     SPUENAPAprendizagemDesignSystem_f0eeed: NS;
+    __SPU_IMAGE_SLOT_RUNTIME?: {
+      snapshot: () => string;
+      replace: (content: string) => void;
+      clear: () => void;
+    };
   }
 }

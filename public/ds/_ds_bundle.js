@@ -78,6 +78,7 @@ try { (() => {
   // the host allowlists to *.state.json basenames only.
   const subs = new Set();
   let slots = {};
+  let storeRevision = 0;
   // ids explicitly cleared before the sidecar fetch resolved — otherwise
   // the merge below can't tell "never set" from "just deleted" and would
   // resurrect the sidecar's stale value.
@@ -86,7 +87,9 @@ try { (() => {
   let loadP = null;
   function load() {
     if (loadP) return loadP;
+    const revision = storeRevision;
     loadP = fetch(STATE_FILE).then(r => r.ok ? r.json() : null).then(j => {
+      if (revision !== storeRevision) return;
       // Merge: sidecar loses to any in-memory change that raced ahead of
       // the fetch (drop or clear) so neither is clobbered by hydration.
       if (j && typeof j === 'object') {
@@ -662,6 +665,32 @@ try { (() => {
       }
     }
   }
+  window.__SPU_IMAGE_SLOT_RUNTIME = {
+    snapshot() {
+      return loaded || Object.keys(slots).length ? JSON.stringify(slots) : '';
+    },
+    replace(content) {
+      try {
+        const next = typeof content === 'string' ? JSON.parse(content) : content;
+        slots = next && typeof next === 'object' && !Array.isArray(next) ? next : {};
+      } catch {
+        slots = {};
+      }
+      storeRevision++;
+      tombstones.clear();
+      loaded = true;
+      subs.forEach(fn => fn());
+      save();
+    },
+    clear() {
+      slots = {};
+      storeRevision++;
+      tombstones.clear();
+      loaded = true;
+      subs.forEach(fn => fn());
+      save();
+    }
+  };
   if (!customElements.get('image-slot')) {
     customElements.define('image-slot', ImageSlot);
   }

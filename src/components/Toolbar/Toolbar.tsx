@@ -2,9 +2,8 @@ import { useRef, useState } from 'react';
 import type { NS, Doc } from '../../types/ds';
 import { exportAssetsZip, exportScormZip, exportSelfContained } from '../../utils/exportFormats';
 import { normalizeProjectContent } from '../../utils/projectCompat';
+import { replaceImageSlots } from '../../utils/imageSlotStore';
 import styles from './Toolbar.module.css';
-
-const SLOT_KEY = 'spu_image_slots';
 
 interface Props {
   ns: NS;
@@ -69,12 +68,12 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const { raw, imageSlots } = parseProjectFile(String(reader.result), file.name);
         const migrated = BuilderExport.migrate(normalizeProjectContent(raw));
         const safe = BuilderExport.sanitize ? BuilderExport.sanitize(migrated) : migrated;
-        if (imageSlots) localStorage.setItem(SLOT_KEY, imageSlots);
+        if (imageSlots) await replaceImageSlots(imageSlots);
         onOpenDoc(safe);
       } catch (err) {
         console.error('Arquivo de projeto inválido', err);

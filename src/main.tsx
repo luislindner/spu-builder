@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as ReactDOM from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { readImageSlots, writeImageSlots } from './utils/imageSlotStore.ts'
 
 // Expõe o React do Vite como global para o _ds_bundle.js (UMD)
 ;(window as unknown as Record<string, unknown>).React = React
@@ -10,15 +11,14 @@ import App from './App.tsx'
 // ── Persistência de <image-slot> no builder ──────────────────────────────
 // O image-slot embutido no bundle persiste via window.omelette.writeFile (sidecar .json) e
 // reidrata via fetch(STATE_FILE). No builder não há host omelette → fazemos
-// um shim em localStorage e interceptamos o fetch do sidecar.
+// um shim persistente em IndexedDB e interceptamos o fetch do sidecar.
 const SLOT_FILE = '.image-slots.state.json'
-const SLOT_KEY = 'spu_image_slots'
 const DS_BASE = `${import.meta.env.BASE_URL}ds/`
-const DS_BUNDLE_VERSION = '2026-07-23.2'
+const DS_BUNDLE_VERSION = '2026-07-23.4'
 ;(window as unknown as Record<string, unknown>).omelette = {
   writeFile: (name: string, content: string) => {
     if (typeof name === 'string' && name.endsWith(SLOT_FILE)) {
-      localStorage.setItem(SLOT_KEY, content)
+      return writeImageSlots(content)
     }
     return Promise.resolve()
   },
@@ -27,8 +27,9 @@ const _fetch = window.fetch.bind(window)
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
   if (url && url.endsWith(SLOT_FILE)) {
-    const v = localStorage.getItem(SLOT_KEY) || '{}'
-    return Promise.resolve(new Response(v, { status: 200, headers: { 'Content-Type': 'application/json' } }))
+    return readImageSlots({ preferLive: false }).then((content) => (
+      new Response(content, { status: 200, headers: { 'Content-Type': 'application/json' } })
+    ))
   }
   return _fetch(input, init)
 }
