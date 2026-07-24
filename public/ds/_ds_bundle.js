@@ -888,8 +888,17 @@ const BLOCKS = [
     license: true,
     licenseKind: 'byncsa',
     credits: [{
-      role: 'Produção',
-      name: '—'
+      role: 'Conteúdo',
+      name: 'Autor'
+    }, {
+      role: 'Revisão',
+      name: '-'
+    }, {
+      role: 'Design Educacional',
+      name: 'Luís Henrique Lindner'
+    }, {
+      role: 'Versão',
+      name: 'Julho de 2026'
     }]
   }
 }, {
@@ -5020,7 +5029,7 @@ const richInline = value => __ds_scope.renderRich(value, {
   inline: true
 });
 __ds_scope.injectCss('spu-pagefooter-css', `
-.spu-pagefooter{background:var(--petrol-800);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark);padding:var(--space-12) var(--gutter);margin-top:var(--space-12)}
+.spu-pagefooter{background:var(--petrol-800);background-image:var(--texture-topo);background-size:420px;color:var(--text-on-dark);padding:var(--space-12) var(--gutter)}
 .spu-pagefooter__inner{max-width:var(--container-content);margin:0 auto;display:grid;grid-template-columns:1.4fr 1fr;gap:clamp(1.5rem,5vw,4rem);align-items:start}
 .spu-pagefooter__code{font-family:var(--font-mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-on-dark);opacity:.8;margin:0 0 var(--space-4)}
 .spu-pagefooter__context{font-size:var(--fs-small);color:var(--text-on-dark-muted);max-width:46ch;margin:0;line-height:1.6}
