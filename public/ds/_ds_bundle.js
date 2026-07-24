@@ -62,9 +62,6 @@ try { (() => {
 
 (() => {
   const STATE_FILE = '.image-slots.state.json';
-  // 2× a ~600px slot in a 1920-wide deck — retina-sharp without making the
-  // sidecar enormous. A 1200px WebP at q=0.85 is ~150-300KB.
-  const MAX_DIM = 1200;
   // Raster formats only. SVG is excluded (can carry script; createImageBitmap
   // on SVG blobs is inconsistent). GIF is excluded because the canvas
   // re-encode keeps only the first frame, so an animated GIF would silently
@@ -166,26 +163,17 @@ try { (() => {
     if (loaded) save();else load().then(save);
   }
 
-  // ── Image downscale ─────────────────────────────────────────────────────
-  // Encode through a canvas so the sidecar carries resized bytes, not the
-  // raw upload. Longest side is capped at 2× the slot's rendered width
-  // (retina) and at MAX_DIM. WebP keeps alpha and is ~10× smaller than PNG
-  // for photos, so there's no need for per-image format picking.
-  async function toDataUrl(file, targetW) {
-    const bitmap = await createImageBitmap(file);
-    try {
-      const cap = Math.min(MAX_DIM, Math.max(1, Math.round(targetW * 2)) || MAX_DIM);
-      const scale = Math.min(1, cap / Math.max(bitmap.width, bitmap.height));
-      const w = Math.max(1, Math.round(bitmap.width * scale));
-      const h = Math.max(1, Math.round(bitmap.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
-      return canvas.toDataURL('image/webp', 0.85);
-    } finally {
-      bitmap.close && bitmap.close();
-    }
+  // ── Original image persistence ──────────────────────────────────────────
+  // Keep the uploaded bytes intact. Compact WebP variants are generated only
+  // when the author chooses a compact export, so the editor and high-quality
+  // packages never depend on an already-downscaled copy.
+  function toDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read image.'));
+      reader.readAsDataURL(file);
+    });
   }
 
   // ── Custom element ──────────────────────────────────────────────────────
@@ -463,13 +451,11 @@ try { (() => {
         this._setError('Drop a PNG, JPEG, WebP, or AVIF image.');
         return;
       }
-      // toDataUrl can take hundreds of ms on a large photo. A Clear or a
-      // newer drop during that window would be clobbered when this await
-      // resumes — bump + capture a generation so stale encodes bail.
+      // Reading can take hundreds of ms on a large image. A Clear or a newer
+      // drop during that window must not be clobbered when this await resumes.
       const gen = ++this._gen;
       try {
-        const w = this.clientWidth || this.offsetWidth || MAX_DIM;
-        const url = await toDataUrl(file, w);
+        const url = await toDataUrl(file);
         if (gen !== this._gen) return;
         // Only exit reframe once the new image is in hand — a rejected type
         // or decode failure leaves the in-progress crop untouched.
@@ -580,7 +566,9 @@ try { (() => {
       this._spill.style.top = t;
     }
     _commitView() {
+      const current = this.id ? getSlot(this.id) : this._local;
       const v = {
+        ...(current || {}),
         s: this._view.s,
         x: this._view.x,
         y: this._view.y
@@ -1350,11 +1338,21 @@ const BLOCKS = [
     inline: true,
     optional: true
   }, {
+    key: 'labelIcon',
+    label: 'Ícone da etiqueta',
+    type: 'icon',
+    optional: true
+  }, {
     key: 'label',
     label: 'Etiqueta',
     type: 'rich',
     inline: true,
     optional: true
+  }, {
+    key: 'tabLabel',
+    label: 'Rótulo da aba',
+    type: 'rich',
+    inline: true
   }, {
     key: 'title',
     label: 'Título',
@@ -1392,16 +1390,23 @@ const BLOCKS = [
     key: 'accent',
     label: 'Cor de acento',
     type: 'accent'
+  }, {
+    key: 'showTabNumbers',
+    label: 'Mostrar números nas abas',
+    type: 'bool'
   }],
   props: {
     hint: 'Explore os slides',
     accent: '',
+    showTabNumbers: true,
     slides: [{
       showImage: true,
       slot: '',
       alt: '',
       caption: '',
+      labelIcon: '',
       label: 'Etiqueta',
+      tabLabel: 'Slide 1',
       title: 'Título do slide',
       subtitle: 'Subtítulo opcional',
       description: '<p>Descrição opcional do conteúdo.</p>',
@@ -1412,7 +1417,9 @@ const BLOCKS = [
       slot: '',
       alt: '',
       caption: '',
+      labelIcon: '',
       label: '',
+      tabLabel: 'Slide 2',
       title: 'Outro título de slide',
       subtitle: '',
       description: '',
@@ -4131,6 +4138,7 @@ __ds_scope.injectCss('spu-content-slider-css', `
 .spu-content-slider__media figcaption{position:absolute;left:var(--space-4);bottom:var(--space-4);z-index:1;max-width:calc(100% - var(--space-8));padding:.55em .8em;border-radius:var(--radius);background:rgba(18,35,31,.84);color:#fff;font-family:var(--font-mono);font-size:var(--fs-caption)}
 .spu-content-slider__body{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(var(--space-6),5vw,var(--space-10))}
 .spu-content-slider__label{display:inline-flex;padding:.35em .65em;border-radius:var(--radius-pill);background:color-mix(in srgb,var(--_cs) 12%,var(--color-surface));color:var(--_cs);font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.spu-content-slider__label--icon{align-items:center;justify-content:center;width:44px;height:44px;padding:0;border-radius:var(--radius)}
 .spu-content-slider__title{margin:var(--space-3) 0 0;font-family:var(--font-display);font-size:clamp(1.75rem,3.5vw,var(--fs-h2));line-height:1.04;letter-spacing:var(--ls-heading);color:var(--text-strong)}
 .spu-content-slider__subtitle{margin:var(--space-3) 0 0;font-family:var(--font-display);font-size:var(--fs-h5);font-weight:600;line-height:1.25;color:var(--_cs)}
 .spu-content-slider__description{margin-top:var(--space-4);color:var(--text-muted)}
@@ -4156,7 +4164,7 @@ function ContentSliderImage({ id, alt }) {
     style: { display: 'block', width: '100%', height: '100%' }
   });
 }
-function ContentSlider({ slides = [], hint = 'Explore os slides', accent, className, style }) {
+function ContentSlider({ slides = [], hint = 'Explore os slides', accent, showTabNumbers = true, className, style }) {
   const [current, setCurrent] = React.useState(0);
   const startX = React.useRef(null);
   const printing = __ds_scope.isPrint();
@@ -4195,7 +4203,7 @@ function ContentSlider({ slides = [], hint = 'Explore os slides', accent, classN
         React.createElement(ContentSliderImage, { id: slide.slot, alt: slide.alt }),
         slide.caption && React.createElement('figcaption', null, __ds_scope.renderRich(slide.caption, { inline: true }))
       ), React.createElement('div', { className: 'spu-content-slider__body' },
-        slide.label && React.createElement('span', { className: 'spu-content-slider__label' }, __ds_scope.renderRich(slide.label, { inline: true })),
+        slide.labelIcon ? React.createElement('span', { className: 'spu-content-slider__label spu-content-slider__label--icon', 'aria-hidden': 'true' }, React.createElement(__ds_scope.Icon, { name: slide.labelIcon, size: 22 })) : slide.label && React.createElement('span', { className: 'spu-content-slider__label' }, __ds_scope.renderRich(slide.label, { inline: true })),
         React.createElement('h3', { className: 'spu-content-slider__title' }, __ds_scope.renderRich(slide.title || 'Título do slide', { inline: true })),
         slide.subtitle && React.createElement('p', { className: 'spu-content-slider__subtitle' }, __ds_scope.renderRich(slide.subtitle, { inline: true })),
         slide.description && React.createElement('div', { className: 'spu-content-slider__description' }, __ds_scope.renderRich(slide.description)),
@@ -4212,7 +4220,7 @@ function ContentSlider({ slides = [], hint = 'Explore os slides', accent, classN
       'aria-selected': index === current,
       tabIndex: index === current ? 0 : -1,
       onClick: () => setCurrent(index)
-    }, React.createElement('span', null, String(index + 1).padStart(2, '0')), React.createElement('b', null, __ds_scope.renderRich(slide.label || slide.title || `Slide ${index + 1}`, { inline: true }))))),
+    }, showTabNumbers && React.createElement('span', null, String(index + 1).padStart(2, '0')), React.createElement('b', null, __ds_scope.renderRich(slide.tabLabel || slide.title || `Slide ${index + 1}`, { inline: true }))))),
     React.createElement('button', { type: 'button', className: 'spu-content-slider__arrow', onClick: () => go(current + 1), 'aria-label': 'Próximo slide' }, React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 20 }))
   ));
 }

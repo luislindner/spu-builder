@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import type { NS, Doc } from '../../types/ds';
-import { exportAssetsZip, exportScormZip, exportSelfContained } from '../../utils/exportFormats';
+import { exportAssetsZip, exportScormZip, exportSelfContained, type ImageQuality } from '../../utils/exportFormats';
 import { normalizeProjectContent } from '../../utils/projectCompat';
 import { replaceImageSlots } from '../../utils/imageSlotStore';
 import styles from './Toolbar.module.css';
@@ -28,6 +28,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
   const [exportOpen, setExportOpen] = useState(false);
   const [tocOpen, setTocOpen] = useState(false);
   const [clearOpen, setClearOpen] = useState(false);
+  const [imageQuality, setImageQuality] = useState<ImageQuality>('high');
 
   const toc = doc.meta.toc || {};
   const tocItems = toc.items || [];
@@ -168,15 +169,44 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
                   <small>Mostrar no final da página gerada.</small>
                 </span>
               </label>
-              <button onClick={() => runExport('HTML', exportSelfContained)}>
+              <fieldset className={styles.exportQuality}>
+                <legend>Qualidade das imagens</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="image-quality"
+                    value="high"
+                    checked={imageQuality === 'high'}
+                    onChange={() => setImageQuality('high')}
+                  />
+                  <span>
+                    <strong>Alta qualidade</strong>
+                    <small>Preserva o arquivo original; gera pacotes maiores.</small>
+                  </span>
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="image-quality"
+                    value="compact"
+                    checked={imageQuality === 'compact'}
+                    onChange={() => setImageQuality('compact')}
+                  />
+                  <span>
+                    <strong>Compacta</strong>
+                    <small>WebP até 1600 px em qualidade 0,90.</small>
+                  </span>
+                </label>
+              </fieldset>
+              <button onClick={() => runExport('HTML', (currentDoc) => exportSelfContained(currentDoc, imageQuality))}>
                 <strong>HTML autocontido</strong>
                 <span>Um arquivo único, mais simples de compartilhar.</span>
               </button>
-              <button onClick={() => runExport('pacote', exportAssetsZip)}>
+              <button onClick={() => runExport('pacote', (currentDoc) => exportAssetsZip(currentDoc, imageQuality))}>
                 <strong>Pacote HTML</strong>
                 <span>ZIP com página e assets separados.</span>
               </button>
-              <button onClick={() => runExport('SCORM', exportScormZip)}>
+              <button onClick={() => runExport('SCORM', (currentDoc) => exportScormZip(currentDoc, imageQuality))}>
                 <strong>SCORM 1.2</strong>
                 <span>ZIP para LMS, concluído ao abrir.</span>
               </button>

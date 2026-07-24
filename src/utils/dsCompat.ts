@@ -30,7 +30,7 @@ const RICH_ITEM_FIELDS: Record<string, string[]> = {
   timeline: ['label', 'period', 'date', 'title', 'content', 'linkLabel'],
   quiz: ['question', 'text', 'feedback'],
   carousel: ['title', 'caption', 'credit'],
-  contentslider: ['label', 'title', 'subtitle', 'description', 'linkLabel', 'caption'],
+  contentslider: ['label', 'tabLabel', 'title', 'subtitle', 'description', 'linkLabel', 'caption'],
 };
 
 const RICH_PROP_FIELDS: Record<string, string[]> = {

@@ -3,10 +3,11 @@
 //  2) Pacote HTML + assets (.zip com pasta assets/ e images/)
 //  3) SCORM 1.2 não-avaliativo (.zip com imsmanifest.xml)
 //
-// Imagens: ficam no sidecar (data URL). Para o pacote/SCORM, extraio para
-// assets/images/*.webp e sirvo o sidecar com caminhos relativos (image-slot
-// relaxado p/ aceitá-los). O sidecar é sempre entregue por um override de
-// fetch embutido, então funciona em file:// (sem fetch real do JSON).
+// Imagens: ficam no sidecar (data URL). A exportação pode preservar o arquivo
+// original ou criar uma cópia WebP compacta. Para o pacote/SCORM, os bytes são
+// extraídos para assets/images/ e o sidecar passa a usar caminhos relativos
+// (image-slot relaxado p/ aceitá-los). O sidecar é sempre entregue por um
+// override de fetch embutido, então funciona em file://.
 
 import { zipSync, strToU8 } from 'fflate';
 import type { Doc } from '../types/ds';
@@ -176,7 +177,7 @@ const DS_COMPAT_JS = `
       timeline:['label','period','date','title','content','linkLabel'],
       quiz:['question','text','feedback'],
       carousel:['title','caption','credit'],
-      contentslider:['label','title','subtitle','description','linkLabel','caption']
+      contentslider:['label','tabLabel','title','subtitle','description','linkLabel','caption']
     };
     var RICH_PROP_FIELDS = {
       flashcard:['term','definition'],
@@ -360,8 +361,12 @@ async function inlineCss(href: string, seen = new Set<string>()): Promise<string
   return out;
 }
 
+export type ImageQuality = 'compact' | 'high';
+
 interface SlotVal { u?: string; s?: number; x?: number; y?: number }
 type Sidecar = Record<string, SlotVal | string>;
+const COMPACT_MAX_DIM = 1600;
+const COMPACT_WEBP_QUALITY = 0.9;
 
 function referencedSlotIds(doc: Doc): Set<string> {
   const ids = new Set<string>();
@@ -402,6 +407,77 @@ function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | n
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return { bytes, ext };
+}
+
+function bytesToDataUrl(bytes: Uint8Array, ext: string): string {
+  const mimeExt = ext === 'jpg' ? 'jpeg' : ext;
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return `data:image/${mimeExt};base64,${btoa(binary)}`;
+}
+
+function framingMeta(value: SlotVal | string): SlotVal {
+  if (typeof value === 'string') return {};
+  const out: SlotVal = {};
+  if (Number.isFinite(value.s)) out.s = value.s;
+  if (Number.isFinite(value.x)) out.x = value.x;
+  if (Number.isFinite(value.y)) out.y = value.y;
+  return out;
+}
+
+async function compactImage(dataUrl: string): Promise<{ bytes: Uint8Array; ext: string } | null> {
+  const decoded = dataUrlToBytes(dataUrl);
+  if (!decoded) return null;
+
+  const mimeExt = decoded.ext === 'jpg' ? 'jpeg' : decoded.ext;
+  const source = new Blob([decoded.bytes as BlobPart], { type: `image/${mimeExt}` });
+  let bitmap: ImageBitmap | null = null;
+  try {
+    bitmap = await createImageBitmap(source);
+    const longest = Math.max(bitmap.width, bitmap.height);
+    if (decoded.ext === 'webp' && longest <= COMPACT_MAX_DIM) return decoded;
+
+    const scale = Math.min(1, COMPACT_MAX_DIM / Math.max(1, longest));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) return decoded;
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const encoded = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', COMPACT_WEBP_QUALITY);
+    });
+    if (!encoded) return decoded;
+    return { bytes: new Uint8Array(await encoded.arrayBuffer()), ext: 'webp' };
+  } catch {
+    return decoded;
+  } finally {
+    bitmap?.close();
+  }
+}
+
+async function imageBytes(dataUrl: string, quality: ImageQuality) {
+  return quality === 'compact' ? compactImage(dataUrl) : dataUrlToBytes(dataUrl);
+}
+
+async function sidecarForInlineExport(doc: Doc, quality: ImageQuality): Promise<Sidecar> {
+  const source = await getSidecar(doc);
+  const out: Sidecar = {};
+  for (const id of Object.keys(source)) {
+    const value = source[id];
+    const url = typeof value === 'string' ? value : value.u;
+    if (!url) continue;
+    if (quality === 'high') {
+      out[id] = { ...framingMeta(value), u: url };
+      continue;
+    }
+    const compact = await compactImage(url);
+    out[id] = { ...framingMeta(value), u: compact ? bytesToDataUrl(compact.bytes, compact.ext) : url };
+  }
+  return out;
 }
 
 async function getReactUMD(): Promise<{ react: string; reactDom: string; license: string }> {
@@ -652,7 +728,7 @@ function download(filename: string, content: Uint8Array | string, mime: string) 
 const safe = (s: string) => (s || 'conteudo').replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'conteudo';
 
 // ── 1) HTML autocontido ─────────────────────────────────────────────────────
-export async function exportSelfContained(doc: Doc) {
+export async function exportSelfContained(doc: Doc, quality: ImageQuality = 'high') {
   const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
@@ -660,38 +736,37 @@ export async function exportSelfContained(doc: Doc) {
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const react = await getReactUMD();
   const lucide = await getDocumentLucideAssets(doc);
-  const sidecar = await getSidecar(doc);
+  const sidecar = await sidecarForInlineExport(doc, quality);
   const html = buildPageHtml({ doc, inline: true, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   download(safe(doc.meta.title) + '.html', html, 'text/html;charset=utf-8');
 }
 
 // Extrai imagens do sidecar para arquivos e devolve sidecar com caminhos relativos.
-async function externalizeImages(files: Record<string, Uint8Array>, doc: Doc): Promise<Sidecar> {
+async function externalizeImages(files: Record<string, Uint8Array>, doc: Doc, quality: ImageQuality): Promise<Sidecar> {
   const src = await getSidecar(doc);
   const out: Sidecar = {};
   let n = 0;
   for (const id of Object.keys(src)) {
     const v = src[id];
     const url = typeof v === 'string' ? v : v.u;
-    const dec = url ? dataUrlToBytes(url) : null;
+    const dec = url ? await imageBytes(url, quality) : null;
     if (!dec) continue;
     const name = `assets/images/img-${n++}-${safe(id).slice(0, 24)}.${dec.ext}`;
     files[name] = dec.bytes;
-    const meta = typeof v === 'string' ? {} : v;
-    out[id] = { ...meta, u: name };
+    out[id] = { ...framingMeta(v), u: name };
   }
   return out;
 }
 
 // ── 2) Pacote HTML + assets (.zip) ───────────────────────────────────────────
-export async function exportAssetsZip(doc: Doc) {
+export async function exportAssetsZip(doc: Doc, quality: ImageQuality = 'high') {
   const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = await externalizeImages(files, doc);
+  const sidecar = await externalizeImages(files, doc, quality);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 
@@ -748,14 +823,14 @@ const SCORM_API_JS = `(function(){
   }
 })();`;
 
-export async function exportScormZip(doc: Doc) {
+export async function exportScormZip(doc: Doc, quality: ImageQuality = 'high') {
   const [bundleJsRaw, stylesCss] = await Promise.all([
     fetchText(DS_BASE + '_ds_bundle.js'),
     inlineCss(DS_BASE + 'styles.css'),
   ]);
   const react = await getReactUMD();
   const files: Record<string, Uint8Array> = {};
-  const sidecar = await externalizeImages(files, doc);
+  const sidecar = await externalizeImages(files, doc, quality);
   const bundleJs = relaxImageSlot(bundleJsRaw);
   const lucide = await getDocumentLucideAssets(doc);
 

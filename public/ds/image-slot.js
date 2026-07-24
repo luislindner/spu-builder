@@ -50,9 +50,6 @@
 
 (() => {
   const STATE_FILE = '.image-slots.state.json';
-  // 2× a ~600px slot in a 1920-wide deck — retina-sharp without making the
-  // sidecar enormous. A 1200px WebP at q=0.85 is ~150-300KB.
-  const MAX_DIM = 1200;
   // Raster formats only. SVG is excluded (can carry script; createImageBitmap
   // on SVG blobs is inconsistent). GIF is excluded because the canvas
   // re-encode keeps only the first frame, so an animated GIF would silently
@@ -141,25 +138,17 @@
     if (loaded) save(); else load().then(save);
   }
 
-  // ── Image downscale ─────────────────────────────────────────────────────
-  // Encode through a canvas so the sidecar carries resized bytes, not the
-  // raw upload. Longest side is capped at 2× the slot's rendered width
-  // (retina) and at MAX_DIM. WebP keeps alpha and is ~10× smaller than PNG
-  // for photos, so there's no need for per-image format picking.
-  async function toDataUrl(file, targetW) {
-    const bitmap = await createImageBitmap(file);
-    try {
-      const cap = Math.min(MAX_DIM, Math.max(1, Math.round(targetW * 2)) || MAX_DIM);
-      const scale = Math.min(1, cap / Math.max(bitmap.width, bitmap.height));
-      const w = Math.max(1, Math.round(bitmap.width * scale));
-      const h = Math.max(1, Math.round(bitmap.height * scale));
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
-      return canvas.toDataURL('image/webp', 0.85);
-    } finally {
-      bitmap.close && bitmap.close();
-    }
+  // ── Original image persistence ──────────────────────────────────────────
+  // Keep the uploaded bytes intact. Compact WebP variants are generated only
+  // when the author chooses a compact export, so the editor and high-quality
+  // packages never depend on an already-downscaled copy.
+  function toDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error || new Error('Could not read image.'));
+      reader.readAsDataURL(file);
+    });
   }
 
   // ── Custom element ──────────────────────────────────────────────────────
@@ -475,13 +464,11 @@
         this._setError('Drop a PNG, JPEG, WebP, or AVIF image.');
         return;
       }
-      // toDataUrl can take hundreds of ms on a large photo. A Clear or a
-      // newer drop during that window would be clobbered when this await
-      // resumes — bump + capture a generation so stale encodes bail.
+      // Reading can take hundreds of ms on a large image. A Clear or a newer
+      // drop during that window must not be clobbered when this await resumes.
       const gen = ++this._gen;
       try {
-        const w = this.clientWidth || this.offsetWidth || MAX_DIM;
-        const url = await toDataUrl(file, w);
+        const url = await toDataUrl(file);
         if (gen !== this._gen) return;
         // Only exit reframe once the new image is in hand — a rejected type
         // or decode failure leaves the in-progress crop untouched.
@@ -568,7 +555,8 @@
     }
 
     _commitView() {
-      const v = { s: this._view.s, x: this._view.x, y: this._view.y };
+      const current = this.id ? getSlot(this.id) : this._local;
+      const v = { ...(current || {}), s: this._view.s, x: this._view.x, y: this._view.y };
       if (this._userUrl) v.u = this._userUrl;
       // Framing-only (no u) persists too so an author-src slot remembers its
       // crop; clearing the sidecar still falls through to src=.
