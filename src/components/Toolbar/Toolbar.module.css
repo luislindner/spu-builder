@@ -143,7 +143,7 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 140;
-  width: 280px;
+  width: 320px;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -181,6 +181,50 @@
   font-size: 11px;
   line-height: 1.35;
 }
+
+.exportQuality {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  margin: 0 0 var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.exportQuality legend {
+  padding: 0;
+  margin-bottom: var(--space-1);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-strong);
+}
+
+.exportQuality label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.exportQuality label:hover { background: var(--color-surface-sunken); }
+
+.exportQuality input {
+  margin-top: 2px;
+  accent-color: var(--color-primary);
+}
+
+.exportQuality label > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exportQuality strong { font-size: var(--fs-caption); }
+.exportQuality small { color: var(--text-muted); font-size: 11px; line-height: 1.35; }
 
 .exportPop button {
   display: flex;
