@@ -3189,6 +3189,16 @@ function resolveMedia(url) {
     src: u
   }; // desconhecido → mantém placeholder + link na legenda
 }
+function mediaTitleText(value) {
+  let html = typeof value === 'string' ? value : React.isValidElement(value) && value.props && typeof value.props.html === 'string' ? value.props.html : '';
+  if (!html) return '';
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      return new DOMParser().parseFromString('<body>' + html + '</body>', 'text/html').body.textContent.trim();
+    } catch (e) {}
+  }
+  return html.replace(/<[^>]*>/g, '').trim();
+}
 function MediaEmbed({
   type = 'video',
   src,
@@ -3200,6 +3210,7 @@ function MediaEmbed({
   style
 }) {
   const isAudio = type === 'audio' || type === 'podcast';
+  const accessibleTitle = mediaTitleText(title);
   const ratio = aspect || (isAudio ? '21 / 9' : '16 / 9');
   const icon = isAudio ? 'headphones' : 'play-circle';
   // src explícito tem prioridade; senão deriva o player a partir da url.
@@ -3219,14 +3230,14 @@ function MediaEmbed({
     };
     player = React.createElement('iframe', {
       src: media.src,
-      title: title || 'Spotify',
+      title: accessibleTitle || 'Spotify',
       loading: 'lazy',
       allow: 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'
     });
   } else if (media.kind === 'iframe') {
     player = React.createElement('iframe', {
       src: media.src,
-      title: title || 'mídia',
+      title: accessibleTitle || 'mídia',
       loading: 'lazy',
       allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
       allowFullScreen: true
@@ -5246,9 +5257,12 @@ function dsNamespace() {
 //   block = { id, type, props:{…}, (children[] se container) }
 //   mode  = 'preview' | 'edit'   (edit habilitará handles/Editable depois)
 
-// Campos cujo valor é texto rico (string HTML) — passam por renderRich.
+// `fields` é o contrato do registry para texto editável salvo como HTML.
+// O antigo `def.rich` não pode ser usado como trava: vários componentes
+// históricos (Figure, PullQuote, Kicker, BleedImage...) já aceitam RichText no
+// canvas sem terem recebido essa flag no registry.
 function richField(def, key) {
-  return def && def.rich && (def.fields || []).indexOf(key) !== -1;
+  return def && (def.fields || []).indexOf(key) !== -1;
 }
 
 // Campos rich tratados como bloco (multilinha); o resto é inline (uma linha).
@@ -5409,8 +5423,13 @@ function BlockView({
   (def.fields || []).forEach(k => {
     if (editing) {
       resolved[k] = fieldNode(k, !BLOCK_LEVEL[k]); // todos os fields viram Editable
-    } else if (richField(def, k) && typeof resolved[k] === 'string' && k === 'children') {
-      resolved.children = __ds_scope.renderRich(resolved.children); // preview: comportamento atual
+    } else if (richField(def, k) && typeof resolved[k] === 'string') {
+      // Preview/export must resolve every field declared as rich text, not
+      // only `children`. Otherwise captions, credits, bylines and similar
+      // fields display their HTML markup literally outside edit mode.
+      resolved[k] = __ds_scope.renderRich(resolved[k], {
+        inline: !BLOCK_LEVEL[k]
+      });
     }
   });
   return React.createElement(Comp, resolved);
