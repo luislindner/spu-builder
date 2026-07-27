@@ -14,7 +14,7 @@ import { readImageSlots, writeImageSlots } from './utils/imageSlotStore.ts'
 // um shim persistente em IndexedDB e interceptamos o fetch do sidecar.
 const SLOT_FILE = '.image-slots.state.json'
 const DS_BASE = `${import.meta.env.BASE_URL}ds/`
-const DS_BUNDLE_VERSION = '2026-07-24.1'
+const DS_BUNDLE_VERSION = '2026-07-27.1'
 ;(window as unknown as Record<string, unknown>).omelette = {
   writeFile: (name: string, content: string) => {
     if (typeof name === 'string' && name.endsWith(SLOT_FILE)) {

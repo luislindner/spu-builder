@@ -155,7 +155,9 @@ export function Inspector({ ns, block, onPatch }: Props) {
   // ---- montagem por kind ----
 
   const fields = def.fields || [];
-  const richField = (k: string) => !!def.rich && fields.includes(k);
+  // `def.fields` armazena HTML vindo do Editable. Nem todos os registros
+  // históricos possuem `rich: true`, embora o canvas aceite formatação.
+  const richField = (k: string) => fields.includes(k);
   const propFields = def.propFields || [];
   const propFieldKeys = new Set(propFields.map(f => f.key));
 
