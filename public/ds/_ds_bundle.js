@@ -4215,7 +4215,7 @@ function ContentSlider({ slides = [], hint = 'Explore os slides', accent, showTa
         slide.caption && React.createElement('figcaption', null, __ds_scope.renderRich(slide.caption, { inline: true }))
       ), React.createElement('div', { className: 'spu-content-slider__body' },
         slide.labelIcon ? React.createElement('span', { className: 'spu-content-slider__label spu-content-slider__label--icon', 'aria-hidden': 'true' }, React.createElement(__ds_scope.Icon, { name: slide.labelIcon, size: 22 })) : slide.label && React.createElement('span', { className: 'spu-content-slider__label' }, __ds_scope.renderRich(slide.label, { inline: true })),
-        React.createElement('h3', { className: 'spu-content-slider__title' }, __ds_scope.renderRich(slide.title || 'Título do slide', { inline: true })),
+        __ds_scope.hasRichContent(slide.title) && React.createElement('h3', { className: 'spu-content-slider__title' }, __ds_scope.renderRich(slide.title, { inline: true })),
         slide.subtitle && React.createElement('p', { className: 'spu-content-slider__subtitle' }, __ds_scope.renderRich(slide.subtitle, { inline: true })),
         slide.description && React.createElement('div', { className: 'spu-content-slider__description' }, __ds_scope.renderRich(slide.description)),
         href && React.createElement('a', { className: 'spu-content-slider__link', href, target: /^https?:/i.test(href) ? '_blank' : undefined, rel: /^https?:/i.test(href) ? 'noopener' : undefined }, __ds_scope.renderRich(slide.linkLabel || 'Saiba mais', { inline: true }), React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 16 }))
@@ -4674,7 +4674,7 @@ RichText.COLORS = COLOR;
 // RichText; ReactNode é devolvido como está. `inline` para campos de uma linha.
 function renderRich(value, opts) {
   const o = opts || {};
-  if (value == null || value === '') return null;
+  if (!hasRichContent(value)) return null;
   if (typeof value === 'string') {
     return React.createElement(RichText, {
       html: value,
@@ -4685,7 +4685,13 @@ function renderRich(value, opts) {
   }
   return value;
 }
-Object.assign(__ds_scope, { RichText, RichTextLinkNotes, renderRich });
+function hasRichContent(value) {
+  if (value == null) return false;
+  if (typeof value !== 'string') return true;
+  const visible = value.replace(/<!--[\s\S]*?-->/g, '').replace(/<br\s*\/?>/gi, '').replace(/<[^>]*>/g, '').replace(/(?:&nbsp;|&#160;|&#x0*a0;|\u00a0)/gi, ' ').replace(/[\s\u00a0\u200b-\u200d\ufeff]/g, '');
+  return visible.length > 0;
+}
+Object.assign(__ds_scope, { RichText, RichTextLinkNotes, renderRich, hasRichContent });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/RichText.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/Callout.jsx
@@ -4919,7 +4925,7 @@ function FeatureGrid({
   }, React.createElement(__ds_scope.Icon, {
     name: it.icon || 'sparkles',
     size: 24
-  })), React.createElement('p', {
+  })), __ds_scope.hasRichContent(it.title) && React.createElement('p', {
     className: 'spu-feature__title'
   }, __ds_scope.renderRich(it.title, {
     inline: true
@@ -5270,7 +5276,8 @@ const BLOCK_LEVEL = {
   children: 1,
   body: 1,
   html: 1,
-  content: 1
+  content: 1,
+  lead: 1
 };
 
 // Rótulos PT-BR para placeholders de campos vazios no modo edit.
@@ -5289,7 +5296,9 @@ const FIELD_PLACEHOLDER = {
   term: 'Termo',
   definition: 'Definição',
   org: 'Identidade',
-  program: 'Nome do programa'
+  program: 'Nome do programa',
+  lead: 'Texto de apresentação',
+  triggerLabel: 'Clique para expandir'
 };
 function BlockView({
   block,
@@ -5340,6 +5349,7 @@ function BlockView({
 
   // —— Título simples (sem componente) ——
   if (block.type === 'titulo') {
+    if (!editing && !__ds_scope.hasRichContent(props.text)) return null;
     const tag = props.level || 'h2';
     return React.createElement(tag, {
       id: block.id,
@@ -5360,6 +5370,7 @@ function BlockView({
 
   // —— Parágrafo (RichText puro) ——
   if (block.type === 'prose') {
+    if (!editing && !__ds_scope.hasRichContent(props.html)) return null;
     return editing ? React.createElement(__ds_scope.Editable, {
       html: typeof props.html === 'string' ? props.html : '',
       style: spacingStyle,

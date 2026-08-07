@@ -51,7 +51,7 @@ function preparePrintBlocks(blocks: Block[]): Block[] {
       block.props.defaultOpen = true;
     }
 
-    if (block.children?.length && block.type === 'section') {
+    if (block.children?.length && (block.type === 'section' || block.type === 'collapsiblesection')) {
       let current = cloneBlock(block);
       current.children = [];
 

@@ -27,7 +27,7 @@ const KNOWN_ENUMS: Record<string, string[]> = {
 };
 
 // Campos de texto longo (multi-linha / HTML de bloco).
-const MULTILINE = new Set(['children', 'body', 'html', 'content']);
+const MULTILINE = new Set(['children', 'body', 'html', 'content', 'lead']);
 // Props ocultas no painel (geridas em outro lugar).
 const HIDDEN = new Set(['children', 'src', '__pageBreakBefore']);
 

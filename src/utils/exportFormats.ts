@@ -226,7 +226,7 @@ const DS_COMPAT_JS = `
     function normalizeWhitespace(value){
       if(typeof value !== 'string') return value;
       var html = value.replace(/(?:&nbsp;|\u00a0)/gi, ' ');
-      if(!/[<>]/.test(html)) return html;
+      if(!/[<>]/.test(html)) return hasRichContent(html) ? html : '';
       html = html.replace(/<div(?:\\s[^>]*)?>/gi, '<p>').replace(/<\\/div>/gi, '</p>');
       if(!/<(?:p|ul|ol|blockquote|h[1-6])\\b/i.test(html) && /(?:<br\\s*\\/?>\\s*){2,}/i.test(html)){
         html = '<p>' + html.replace(/(?:<br\\s*\\/?>\\s*){2,}/gi, '</p><p>') + '</p>';
@@ -234,10 +234,106 @@ const DS_COMPAT_JS = `
       if(/<p\\b/i.test(html) && !/^\\s*<(?:p|ul|ol|blockquote|h[1-6])\\b/i.test(html)){
         html = html.replace(/^([\\s\\S]*?)(?=<p\\b)/i, '<p>$1</p>');
       }
-      return html.replace(/<p>\\s*<p>/gi, '<p>')
+      html = html.replace(/<p>\\s*<p>/gi, '<p>')
         .replace(/<\\/p>\\s*<\\/p>/gi, '</p>')
         .replace(/<p>\\s*<br\\s*\\/?>\\s*<\\/p>/gi, '<p><br></p>');
+      return hasRichContent(html) ? html : '';
     }
+    function hasRichContent(value){
+      if(value == null) return false;
+      if(typeof value !== 'string') return true;
+      var visible = value.replace(/<!--[\\s\\S]*?-->/g, '')
+        .replace(/<br\\s*\\/?>/gi, '')
+        .replace(/<[^>]*>/g, '')
+        .replace(/(?:&nbsp;|&#160;|&#x0*a0;|\\u00a0)/gi, ' ')
+        .replace(/[\\s\\u00a0\\u200b-\\u200d\\ufeff]/g, '');
+      return visible.length > 0;
+    }
+    function installCollapsibleSection(){
+      var registry = NS.BlockRegistry;
+      if(!registry || registry.byType.collapsiblesection) return;
+      var css = '.spu-csection__intro{max-width:var(--measure);margin-bottom:var(--space-5)}' +
+        '.spu-csection__title{margin:0;font-family:var(--font-display);font-size:var(--fs-h2);line-height:1.08;letter-spacing:var(--ls-heading);color:var(--text-strong)}' +
+        '.spu-csection__lead{margin-top:var(--space-3);color:var(--text-muted);font-size:var(--fs-body-lg);line-height:var(--lh-relaxed)}' +
+        '.spu-csection__lead>:last-child{margin-bottom:0}' +
+        '.spu-csection__details{border-top:1px solid var(--color-divider);padding-top:var(--space-4)}' +
+        '.spu-csection__summary{display:inline-flex;align-items:center;gap:var(--space-2);padding:.68em .95em;border:1px solid var(--color-primary);border-radius:var(--radius);color:var(--color-primary-strong);background:transparent;font-family:var(--font-display);font-weight:700;cursor:pointer;list-style:none}' +
+        '.spu-csection__summary::-webkit-details-marker{display:none}' +
+        '.spu-csection__summary:hover{background:var(--color-primary-soft)}' +
+        '.spu-csection__summary svg{transition:transform var(--dur) var(--ease-out)}' +
+        '.spu-csection__details[open]>.spu-csection__summary svg{transform:rotate(180deg)}' +
+        '.spu-csection__body{margin-top:var(--space-6)}' +
+        '.spu-section--dark .spu-csection__summary{border-color:var(--text-on-dark);color:var(--text-on-dark)}' +
+        '.spu-section--dark .spu-csection__summary:hover{background:rgba(255,255,255,.1)}' +
+        '@media print{.spu-csection__details>.spu-csection__body{display:block!important}.spu-csection__summary{display:none!important}}';
+      if(NS.injectCss) NS.injectCss('spu-collapsible-section-css', css);
+      else if(!document.getElementById('spu-collapsible-section-css')){
+        var style = document.createElement('style');
+        style.id = 'spu-collapsible-section-css';
+        style.textContent = css;
+        document.head.appendChild(style);
+      }
+      NS.CollapsibleSection = function(props){
+        props = props || {};
+        var title = props.title;
+        var lead = props.lead;
+        var triggerLabel = props.triggerLabel || 'Clique para expandir';
+        var printing = NS.isPrint && NS.isPrint();
+        var state = React.useState(!!props.defaultOpen);
+        var open = state[0];
+        var setOpen = state[1];
+        var forcedOpen = printing || props.__builderEditing === true;
+        var sectionProps = Object.assign({}, props, {
+          width: props.width || 'content',
+          surface: props.surface || 'none',
+          pad: props.pad || 'lg',
+          className: ['spu-csection', props.className].filter(Boolean).join(' ')
+        });
+        ['title','lead','triggerLabel','defaultOpen','__builderEditing','children'].forEach(function(key){ delete sectionProps[key]; });
+        return React.createElement(NS.Section, sectionProps,
+          React.createElement(React.Fragment, null,
+            (hasRichContent(title) || hasRichContent(lead)) && React.createElement('div', { className:'spu-csection__intro' },
+              hasRichContent(title) && React.createElement('h2', { className:'spu-csection__title' }, NS.renderRich ? NS.renderRich(title, { inline:true }) : title),
+              hasRichContent(lead) && React.createElement('div', { className:'spu-csection__lead' }, NS.renderRich ? NS.renderRich(lead) : lead)
+            ),
+            React.createElement('details', {
+              className:'spu-csection__details',
+              open: forcedOpen || open,
+              onToggle:function(event){ if(!forcedOpen) setOpen(event.currentTarget.open); }
+            },
+              React.createElement('summary', {
+                className:'spu-csection__summary',
+                onClick:function(event){ if(forcedOpen) event.preventDefault(); }
+              },
+                NS.renderRich ? NS.renderRich(triggerLabel, { inline:true }) : triggerLabel,
+                React.createElement(NS.Icon, { name:'chevron-down', size:18 })
+              ),
+              React.createElement('div', { className:'spu-csection__body' }, props.children)
+            )
+          )
+        );
+      };
+      var definition = {
+        type:'collapsiblesection', component:'CollapsibleSection', label:'Seção expansível',
+        icon:'chevron-down', cat:'Estrutura', kind:'container',
+        fields:['title','lead','triggerLabel'],
+        props:{ title:'Título da seção', lead:'<p>Apresente brevemente o conteúdo que poderá ser expandido.</p>', triggerLabel:'Clique para expandir', defaultOpen:false, width:'content', surface:'none', pad:'lg', children:[] },
+        propFields:[{ key:'defaultOpen', label:'Iniciar aberta', type:'bool' }]
+      };
+      var sectionIndex = registry.blocks.findIndex(function(item){ return item.type === 'section'; });
+      registry.blocks.splice(sectionIndex >= 0 ? sectionIndex + 1 : registry.blocks.length, 0, definition);
+      registry.byType[definition.type] = definition;
+      if(registry.structuralTypes.indexOf(definition.type) < 0){
+        var structuralIndex = registry.structuralTypes.indexOf('section');
+        registry.structuralTypes.splice(structuralIndex >= 0 ? structuralIndex + 1 : registry.structuralTypes.length, 0, definition.type);
+      }
+      var originalNewBlock = registry.newBlock.bind(registry);
+      registry.newBlock = function(type, child){
+        if(type !== definition.type) return originalNewBlock(type, child);
+        return { id:(child ? 'c' : 'b') + Math.random().toString(36).slice(2, 9), type:definition.type, props:JSON.parse(JSON.stringify(definition.props)) };
+      };
+    }
+    installCollapsibleSection();
     var Masthead = NS.Masthead;
     if(Masthead){
       NS.Masthead = function(props){

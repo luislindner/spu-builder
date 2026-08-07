@@ -7,12 +7,15 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  pointerWithin,
+  type CollisionDetection,
 } from '@dnd-kit/core';
 import { useDS } from './hooks/useDS';
 import {
   docReducer,
   findBlock,
-  findParentBlock,
+  findBlockArray,
+  findBlockParentId,
   findBlockIndex,
   isDescendantOf,
   type DocState,
@@ -30,6 +33,13 @@ import styles from './App.module.css';
 
 const AUTOSAVE_KEY = 'spu_builder_doc';
 type DropTarget = { parentId: string | null; index: number };
+
+// Em containers aninhados (accordion > colunas), o centro geométrico pode
+// apontar para um ancestral distante. A área sob o ponteiro deve ter prioridade.
+const nestedCollisionDetection: CollisionDetection = (args) => {
+  const pointed = pointerWithin(args);
+  return pointed.length ? pointed : closestCenter(args);
+};
 
 class AppErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -142,7 +152,7 @@ export default function App() {
     // Bloco de conteúdo → precisa de uma Section.
     const blocks = state.doc.blocks;
     const last = blocks[blocks.length - 1];
-    if (last && last.type === 'section') {
+    if (last && (last.type === 'section' || last.type === 'collapsiblesection')) {
       dispatch({ type: 'ADD_CHILD', parentId: last.id, block });
     } else {
       const sec = ns.BlockRegistry.newBlock('section');
@@ -232,8 +242,7 @@ export default function App() {
     const movingContainerIntoOwnChild = target.parentId ? target.parentId === activeId || isDescendantOf(state.doc.blocks, target.parentId, activeId) : false;
     if (movingContainerIntoOwnChild || (!canMoveToTop && !canMoveToContainer)) return null;
 
-    const parent = findParentBlock(state.doc.blocks, activeId);
-    const currentParentId = parent?.id ?? null;
+    const currentParentId = findBlockParentId(state.doc.blocks, activeId);
     const currentIndex = findBlockIndex(state.doc.blocks, activeId);
     if (currentParentId === target.parentId && (target.index === currentIndex || target.index === currentIndex + 1)) return null;
     return target;
@@ -249,23 +258,23 @@ export default function App() {
 
     if (overId.startsWith('drop:')) {
       const parentId = overId.slice(5);
-      const parent = findBlock(blocks, parentId);
-      return { parentId, index: parent?.children?.length ?? 0 };
+      const target = findBlockArray(blocks, parentId);
+      return { parentId, index: target?.length ?? 0 };
     }
 
     const overBlock = findBlock(blocks, overId);
     if (!overBlock) return null;
     const overDef = ns?.BlockRegistry.byType[overBlock.type];
-    const overParent = findParentBlock(blocks, overId);
+    const overParentId = findBlockParentId(blocks, overId);
 
     const overRect = over.rect;
     const activeRect = active.rect.current.translated || active.rect.current.initial;
     const activeCenterY = activeRect ? activeRect.top + activeRect.height / 2 : overRect.top;
     const after = activeCenterY > overRect.top + overRect.height / 2;
 
-    if (overParent) {
+    if (overParentId) {
       const overIndex = findBlockIndex(blocks, overId);
-      return { parentId: overParent.id, index: overIndex + (after ? 1 : 0) };
+      return { parentId: overParentId, index: overIndex + (after ? 1 : 0) };
     }
 
     if (overDef?.kind === 'container') {
@@ -294,12 +303,12 @@ export default function App() {
   const selectedBlock: Block | null = selectedId ? findBlock(state.doc.blocks, selectedId) : null;
 
   const handleMove = (id: string, dir: 'up' | 'down') => {
-    const parent = findParentBlock(state.doc.blocks, id);
-    const arr = parent ? (parent.children as Block[]) : state.doc.blocks;
+    const parentId = findBlockParentId(state.doc.blocks, id);
+    const arr = findBlockArray(state.doc.blocks, parentId) || [];
     const from = arr.findIndex(b => b.id === id);
     const to = dir === 'up' ? from - 1 : from + 1;
     if (from !== -1 && to >= 0 && to < arr.length) {
-      dispatch({ type: 'MOVE', parentId: parent?.id ?? null, fromIndex: from, toIndex: to });
+      dispatch({ type: 'MOVE', parentId, fromIndex: from, toIndex: to });
     }
   };
 
@@ -327,7 +336,7 @@ export default function App() {
     <AppErrorBoundary>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={nestedCollisionDetection}
         onDragOver={handleDragOver}
         onDragCancel={() => setDropTarget(null)}
         onDragEnd={handleDragEnd}

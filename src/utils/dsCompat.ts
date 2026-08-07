@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FieldDef, NS } from '../types/ds';
-import { normalizeEditorWhitespace } from './projectCompat';
+import { installCollapsibleSection } from './collapsibleSection';
+import { hasMeaningfulText, normalizeEditorWhitespace } from './projectCompat';
 
 type Component = React.ComponentType<Record<string, unknown>>;
 const COMPAT_WRAPPED_TYPES = [
@@ -46,6 +47,7 @@ const RICH_DIRECT_FIELDS: Record<string, string[]> = {
 function renderRichInline(ns: NS, value: unknown) {
   if (typeof value !== 'string') return value;
   const normalized = normalizeEditorWhitespace(value);
+  if (!hasMeaningfulText(normalized)) return null;
   if (!/[<&]/.test(normalized)) return normalized;
   const RichText = ns.RichText as React.ComponentType<Record<string, unknown>>;
   return React.createElement(RichText, { html: normalized, as: 'span', className: 'spu-richtext--inline' });
@@ -54,6 +56,7 @@ function renderRichInline(ns: NS, value: unknown) {
 function renderRichBlock(ns: NS, value: unknown) {
   if (typeof value !== 'string') return value;
   const normalized = normalizeEditorWhitespace(value);
+  if (!hasMeaningfulText(normalized)) return null;
   if (!/[<&]/.test(normalized)) return normalized;
   return React.createElement(ns.RichText, { html: normalized });
 }
@@ -61,6 +64,8 @@ function renderRichBlock(ns: NS, value: unknown) {
 export function installDSCompat(ns: NS) {
   const target = ns as NS & { __spuBuilderCompat?: boolean };
   if (!target || target.__spuBuilderCompat) return;
+
+  installCollapsibleSection(ns);
 
   const registry = ns.BlockRegistry?.byType;
   if (registry?.hero) registry.hero.rich = true;

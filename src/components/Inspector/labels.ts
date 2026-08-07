@@ -45,6 +45,7 @@ export const FIELD_LABELS: Record<string, string> = {
   showImage: 'Exibir imagem', subtitle: 'Subtítulo', linkHref: 'URL do link', linkLabel: 'Texto do link',
   labelIcon: 'Ícone da etiqueta', tabLabel: 'Rótulo da aba', showTabNumbers: 'Mostrar números nas abas',
   hint: 'Chamada superior', accent: 'Cor de acento', alt: 'Texto alternativo',
+  lead: 'Texto de apresentação', triggerLabel: 'Texto para expandir', defaultOpen: 'Iniciar aberta',
 };
 
 export const lbl = (k: string) => FIELD_LABELS[k] || k;

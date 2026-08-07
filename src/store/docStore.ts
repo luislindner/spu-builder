@@ -26,86 +26,156 @@ export interface DocState {
 }
 
 // ── Walkers de árvore ──────────────────────────────────────────────────────
-export function findBlock(blocks: Block[], id: string): Block | null {
-  for (const b of blocks) {
-    if (b.id === id) return b;
-    if (b.children) {
-      const f = findBlock(b.children, id);
-      if (f) return f;
+// Accordion e timeline guardam blocos em arrays "blocks" dentro de props. Para
+// o drag-and-drop, esses arrays recebem um id virtual e passam a se comportar
+// como qualquer block.children, inclusive para mover/duplicar recursivamente.
+const EMBEDDED_PARENT_PREFIX = 'embedded:';
+type EmbeddedPath = Array<string | number>;
+
+interface BlockLocation {
+  block: Block;
+  arr: Block[];
+  index: number;
+  parentId: string | null;
+}
+
+export function embeddedParentId(ownerId: string, path: EmbeddedPath): string {
+  return EMBEDDED_PARENT_PREFIX + encodeURIComponent(ownerId) + ':' + encodeURIComponent(JSON.stringify(path));
+}
+
+function parseEmbeddedParentId(parentId: string): { ownerId: string; path: EmbeddedPath } | null {
+  if (!parentId.startsWith(EMBEDDED_PARENT_PREFIX)) return null;
+  const separator = parentId.indexOf(':', EMBEDDED_PARENT_PREFIX.length);
+  if (separator === -1) return null;
+  try {
+    const ownerId = decodeURIComponent(parentId.slice(EMBEDDED_PARENT_PREFIX.length, separator));
+    const path = JSON.parse(decodeURIComponent(parentId.slice(separator + 1)));
+    return Array.isArray(path) ? { ownerId, path } : null;
+  } catch {
+    return null;
+  }
+}
+
+function isBlock(value: unknown): value is Block {
+  return !!value && typeof value === 'object'
+    && typeof (value as Block).id === 'string'
+    && typeof (value as Block).type === 'string'
+    && !!(value as Block).props && typeof (value as Block).props === 'object';
+}
+
+function visitEmbeddedBlockArrays(
+  value: unknown,
+  path: EmbeddedPath,
+  visit: (arr: Block[], path: EmbeddedPath) => boolean,
+): boolean {
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index++) {
+      if (visitEmbeddedBlockArrays(value[index], [...path, index], visit)) return true;
     }
-    const embedded = findEmbeddedBlock(b.props, id);
+    return false;
+  }
+  if (!value || typeof value !== 'object') return false;
+
+  for (const [key, current] of Object.entries(value as Record<string, unknown>)) {
+    const nextPath = [...path, key];
+    if (key === 'blocks' && Array.isArray(current) && current.every(isBlock)) {
+      if (visit(current, nextPath)) return true;
+      continue;
+    }
+    if (visitEmbeddedBlockArrays(current, nextPath, visit)) return true;
+  }
+  return false;
+}
+
+function findBlockLocationInArray(blocks: Block[], id: string, parentId: string | null): BlockLocation | null {
+  for (let index = 0; index < blocks.length; index++) {
+    const block = blocks[index];
+    if (block.id === id) return { block, arr: blocks, index, parentId };
+
+    if (block.children) {
+      const child = findBlockLocationInArray(block.children, id, block.id);
+      if (child) return child;
+    }
+
+    let embedded: BlockLocation | null = null;
+    visitEmbeddedBlockArrays(block.props, [], (arr, path) => {
+      embedded = findBlockLocationInArray(arr, id, embeddedParentId(block.id, path));
+      return embedded !== null;
+    });
     if (embedded) return embedded;
   }
   return null;
 }
 
-// Accordion e timeline guardam blocos dentro de props (items[].blocks e
-// eras[].milestones[].blocks). Eles também precisam participar da seleção e
-// das ações id-based do inspetor, embora não pertençam a block.children.
-function findEmbeddedBlock(value: unknown, id: string): Block | null {
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findEmbeddedBlock(item, id);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (!value || typeof value !== 'object') return null;
+function findBlockLocation(blocks: Block[], id: string): BlockLocation | null {
+  return findBlockLocationInArray(blocks, id, null);
+}
 
-  const object = value as Record<string, unknown>;
-  if (typeof object.id === 'string' && typeof object.type === 'string' && object.props && typeof object.props === 'object') {
-    const block = object as unknown as Block;
-    if (block.id === id) return block;
-    if (block.children) {
-      const child = findBlock(block.children, id);
-      if (child) return child;
-    }
-    return findEmbeddedBlock(block.props, id);
+export function findBlock(blocks: Block[], id: string): Block | null {
+  return findBlockLocation(blocks, id)?.block ?? null;
+}
+
+// Array endereçado por um pai real (block.children) ou por um pai virtual
+// (items[n].blocks / eras[n].milestones[n].blocks).
+export function findBlockArray(blocks: Block[], parentId: string | null, create = false): Block[] | null {
+  if (parentId === null) return blocks;
+
+  const embedded = parseEmbeddedParentId(parentId);
+  if (!embedded) {
+    const parent = findBlock(blocks, parentId);
+    if (!parent) return null;
+    if (!parent.children && create) parent.children = [];
+    return parent.children ?? null;
   }
 
-  for (const item of Object.values(object)) {
-    const found = findEmbeddedBlock(item, id);
-    if (found) return found;
+  const owner = findBlock(blocks, embedded.ownerId);
+  if (!owner) return null;
+  let current: unknown = owner.props;
+  for (let index = 0; index < embedded.path.length; index++) {
+    const segment = embedded.path[index];
+    const nextSegment = embedded.path[index + 1];
+    if (!current || typeof current !== 'object') return null;
+    const container = current as Record<string | number, unknown>;
+    if (container[segment] === undefined && create) {
+        container[segment] = nextSegment === undefined || typeof nextSegment === 'number' ? [] : {};
+    }
+    current = container[segment];
   }
-  return null;
+  return Array.isArray(current) ? current as Block[] : null;
 }
 
 // Array que contém o id (para splice/reorder) + o índice.
 function findParentArray(blocks: Block[], id: string): { arr: Block[]; index: number } | null {
-  for (let i = 0; i < blocks.length; i++) {
-    if (blocks[i].id === id) return { arr: blocks, index: i };
-    const kids = blocks[i].children;
-    if (kids) {
-      const f = findParentArray(kids, id);
-      if (f) return f;
-    }
-  }
-  return null;
+  const location = findBlockLocation(blocks, id);
+  return location ? { arr: location.arr, index: location.index } : null;
 }
 
-// Container pai de um id (null se for top-level).
+export function findBlockParentId(blocks: Block[], id: string): string | null {
+  return findBlockLocation(blocks, id)?.parentId ?? null;
+}
+
+// Mantido para consumidores que precisam especificamente de um container real.
 export function findParentBlock(blocks: Block[], id: string): Block | null {
-  for (const b of blocks) {
-    if (b.children?.some(c => c.id === id)) return b;
-    if (b.children) {
-      const f = findParentBlock(b.children, id);
-      if (f) return f;
-    }
-  }
-  return null;
+  const parentId = findBlockParentId(blocks, id);
+  return parentId && !parentId.startsWith(EMBEDDED_PARENT_PREFIX) ? findBlock(blocks, parentId) : null;
 }
 
 export function findBlockIndex(blocks: Block[], id: string): number {
-  const parent = findParentBlock(blocks, id);
-  const arr = parent ? parent.children || [] : blocks;
-  return arr.findIndex((b) => b.id === id);
+  return findBlockLocation(blocks, id)?.index ?? -1;
 }
 
-export function isDescendantOf(blocks: Block[], id: string, possibleAncestorId: string): boolean {
-  const parent = findParentBlock(blocks, id);
-  if (!parent) return false;
-  if (parent.id === possibleAncestorId) return true;
-  return isDescendantOf(blocks, parent.id, possibleAncestorId);
+export function isDescendantOf(blocks: Block[], idOrParentId: string, possibleAncestorId: string): boolean {
+  let parentId: string | null = idOrParentId.startsWith(EMBEDDED_PARENT_PREFIX)
+    ? idOrParentId
+    : findBlockParentId(blocks, idOrParentId);
+
+  while (parentId) {
+    const embedded = parseEmbeddedParentId(parentId);
+    const parentBlockId = embedded?.ownerId ?? parentId;
+    if (parentBlockId === possibleAncestorId) return true;
+    parentId = findBlockParentId(blocks, parentBlockId);
+  }
+  return false;
 }
 
 export function docReducer(state: DocState, action: DocAction): DocState {
@@ -152,20 +222,14 @@ export function docReducer(state: DocState, action: DocAction): DocState {
         break;
 
       case 'ADD_CHILD': {
-        const parent = findBlock(blocks, action.parentId);
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.push(prepareBlock(action.block) as never);
-        }
+        const target = findBlockArray(blocks, action.parentId, true);
+        if (target) target.push(prepareBlock(action.block) as never);
         break;
       }
 
       case 'ADD_CHILD_AT': {
-        const parent = findBlock(blocks, action.parentId);
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.splice(clampIndex(action.index, parent.children.length), 0, prepareBlock(action.block) as never);
-        }
+        const target = findBlockArray(blocks, action.parentId, true);
+        if (target) target.splice(clampIndex(action.index, target.length), 0, prepareBlock(action.block) as never);
         break;
       }
 
@@ -193,9 +257,7 @@ export function docReducer(state: DocState, action: DocAction): DocState {
       }
 
       case 'MOVE': {
-        const arr = action.parentId
-          ? findBlock(blocks, action.parentId)?.children
-          : blocks;
+        const arr = findBlockArray(blocks, action.parentId);
         if (arr) {
           const [m] = arr.splice(action.fromIndex, 1);
           arr.splice(action.toIndex, 0, m);
@@ -207,7 +269,7 @@ export function docReducer(state: DocState, action: DocAction): DocState {
         const found = findParentArray(blocks, action.id);
         if (!found) break;
         const [moving] = found.arr.splice(found.index, 1);
-        const targetArr = action.parentId ? findBlock(blocks, action.parentId)?.children : blocks;
+        const targetArr = findBlockArray(blocks, action.parentId, true);
         if (!targetArr) {
           found.arr.splice(found.index, 0, moving);
           break;
@@ -254,7 +316,25 @@ function normalizeContainer(block: Block): Block {
   if (nestedChildren) delete (props as Record<string, unknown>).children;
   applyBuilderDefaults(normalized);
   if (normalized.children) normalized.children = normalized.children.map(normalizeContainer);
+  normalizeEmbeddedContainers(normalized.props);
   return normalized;
+}
+
+function normalizeEmbeddedContainers(value: unknown): void {
+  if (Array.isArray(value)) {
+    value.forEach(normalizeEmbeddedContainers);
+    return;
+  }
+  if (!value || typeof value !== 'object') return;
+
+  const object = value as Record<string, unknown>;
+  Object.entries(object).forEach(([key, current]) => {
+    if (key === 'blocks' && Array.isArray(current) && current.every(isBlock)) {
+      object[key] = current.map(normalizeContainer);
+      return;
+    }
+    normalizeEmbeddedContainers(current);
+  });
 }
 
 function applyBuilderDefaults(block: Block): Block {
@@ -312,6 +392,19 @@ function reassignSlots(block: Block): Block {
   if (block.children) block.children.forEach(reassignSlots);
   visitEmbeddedBlocks(block.props, reassignSlots);
   return block;
+}
+
+// Duplica com segurança valores de listas do Inspector. Itens de accordion e
+// timeline podem conter blocos completos; ids e slots precisam ser novos para
+// não apontarem para a mesma seleção/imagem do item original.
+export function duplicateNestedValue<T>(value: T): T {
+  const clone = JSON.parse(JSON.stringify(value)) as T;
+  visitEmbeddedBlocks(clone, (block) => {
+    reassignIds(block);
+    reassignSlots(block);
+  });
+  visitSlotProps(clone, uid(), [], true);
+  return clone;
 }
 
 function visitEmbeddedBlocks(value: unknown, visit: (block: Block) => void): void {

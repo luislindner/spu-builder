@@ -16,7 +16,7 @@ function copyAlias(props: JsonRecord, target: string, aliases: string[]) {
 
 export function normalizeEditorWhitespace(value: string): string {
   const clean = value.replace(/(?:&nbsp;|\u00a0)/gi, ' ');
-  if (!/[<>]/.test(clean)) return clean;
+  if (!/[<>]/.test(clean)) return hasMeaningfulText(clean) ? clean : '';
 
   let html = clean
     .replace(/<div(?:\s[^>]*)?>/gi, '<p>')
@@ -30,10 +30,30 @@ export function normalizeEditorWhitespace(value: string): string {
     html = html.replace(/^([\s\S]*?)(?=<p\b)/i, '<p>$1</p>');
   }
 
-  return html
+  const normalized = html
     .replace(/<p>\s*<p>/gi, '<p>')
     .replace(/<\/p>\s*<\/p>/gi, '</p>')
     .replace(/<p>\s*<br\s*\/?>\s*<\/p>/gi, '<p><br></p>');
+
+  return hasMeaningfulText(normalized) ? normalized : '';
+}
+
+/**
+ * Diz se um campo de texto possui conteúdo visível. Editores rich-text podem
+ * persistir um campo aparentemente vazio como `<p><br></p>`, `&nbsp;` ou com
+ * caracteres de largura zero; todos esses casos devem se comportar como `''`.
+ */
+export function hasMeaningfulText(value: unknown): boolean {
+  if (typeof value !== 'string') return value !== undefined && value !== null;
+
+  const visible = value
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<br\s*\/?>/gi, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/(?:&nbsp;|&#160;|&#x0*a0;|\u00a0)/gi, ' ')
+    .replace(/[\s\u00a0\u200b-\u200d\ufeff]/g, '');
+
+  return visible.length > 0;
 }
 
 function normalizeStrings(value: unknown): unknown {

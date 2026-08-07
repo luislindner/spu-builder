@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { NS, FieldDef } from '../../types/ds';
+import { duplicateNestedValue } from '../../store/docStore';
 import { lbl } from './labels';
 import { SlotField } from './SlotField';
 import { TokenColorControl } from './TokenColorControl';
@@ -132,6 +133,11 @@ export function ListEditor({ ns, fields, items, onChange, itemKey }: ListEditorP
     onChange(next);
   };
   const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i));
+  const duplicate = (i: number) => {
+    const next = items.slice();
+    next.splice(i + 1, 0, duplicateNestedValue(items[i]));
+    onChange(next);
+  };
   const update = (i: number, v: Json) => onChange(items.map((it, idx) => (idx === i ? v : it)));
   const add = () => onChange([...items, blankItem(fields)]);
 
@@ -160,6 +166,9 @@ export function ListEditor({ ns, fields, items, onChange, itemKey }: ListEditorP
               )}
               <button className={styles.iconBtn} onClick={() => move(i, i - 1)} disabled={i === 0} title="Subir">↑</button>
               <button className={styles.iconBtn} onClick={() => move(i, i + 1)} disabled={i === items.length - 1} title="Descer">↓</button>
+              <button className={styles.iconBtn} onClick={() => duplicate(i)} title="Duplicar item">
+                <ns.Icon name="repeat" size={12} />
+              </button>
               <button className={styles.iconBtnDanger} onClick={() => remove(i)} title="Remover">✕</button>
             </div>
           </div>
