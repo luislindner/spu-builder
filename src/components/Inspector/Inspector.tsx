@@ -261,7 +261,7 @@ export function Inspector({ ns, block, onPatch }: Props) {
       {props.level !== undefined && !fields.includes('level') && selectField('level', LEVEL_OPTIONS)}
       {props.icon !== undefined && !propFieldKeys.has('icon') && iconField('icon')}
       {props.kickerIcon !== undefined && iconField('kickerIcon')}
-      {props.color !== undefined && block.type !== 'callout' && accentField('color')}
+      {props.color !== undefined && !propFieldKeys.has('color') && block.type !== 'callout' && accentField('color')}
       {props.tone !== undefined && selectField('tone', BuilderManifest.tones, true, block.type === 'callout' ? (tone) => ({ tone, color: '' }) : undefined)}
 
       {/* 4) PROPS DE OBJETO via schema (propFields: flashcard, mediaembed, compareab…) */}

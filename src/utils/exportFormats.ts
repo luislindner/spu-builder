@@ -180,7 +180,7 @@ const DS_COMPAT_JS = `
       contentslider:['label','tabLabel','title','subtitle','description','linkLabel','caption']
     };
     var RICH_PROP_FIELDS = {
-      flashcard:['term','definition'],
+      flashcard:['term','description','definition'],
       compareab:['label','title','content']
     };
     var RICH_DIRECT_FIELDS = {

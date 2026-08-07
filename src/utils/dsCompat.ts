@@ -35,7 +35,7 @@ const RICH_ITEM_FIELDS: Record<string, string[]> = {
 };
 
 const RICH_PROP_FIELDS: Record<string, string[]> = {
-  flashcard: ['term', 'definition'],
+  flashcard: ['term', 'description', 'definition'],
   compareab: ['label', 'title', 'content'],
 };
 
