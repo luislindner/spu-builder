@@ -1,8 +1,9 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { NS, Doc } from '../../types/ds';
 import { exportAssetsZip, exportScormZip, exportSelfContained, type ImageQuality } from '../../utils/exportFormats';
 import { normalizeProjectContent } from '../../utils/projectCompat';
 import { replaceImageSlots } from '../../utils/imageSlotStore';
+import { collectRichNotes } from '../../utils/richNotes';
 import styles from './Toolbar.module.css';
 
 interface Props {
@@ -16,11 +17,12 @@ interface Props {
   onOpenDoc: (doc: Doc) => void;
   onPreview: () => void;
   onPrintPreview: () => void;
+  onRichNotes: () => void;
   onMetaChange: (patch: Record<string, unknown>) => void;
   onClearDoc: () => void;
 }
 
-export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChange, onOpenDoc, onPreview, onPrintPreview, onMetaChange, onClearDoc }: Props) {
+export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChange, onOpenDoc, onPreview, onPrintPreview, onRichNotes, onMetaChange, onClearDoc }: Props) {
   const { BuilderExport } = ns;
   const fileInput = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
@@ -34,6 +36,8 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
   const tocItems = toc.items || [];
   const tocEnabled = toc.enabled !== false; // default ligado
   const builderCreditEnabled = doc.meta.builderCredit !== false;
+  const richNotes = useMemo(() => collectRichNotes(doc.blocks), [doc.blocks]);
+  const richNoteCount = richNotes.glossary.length + richNotes.links.length;
 
   const runExport = async (label: string, fn: (doc: Doc) => Promise<void>) => {
     setExporting(true);
@@ -140,6 +144,9 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
             </div>
           )}
         </div>
+        <button className={styles.btn} onClick={onRichNotes} title="Revisar termos de glossário e links">
+          Termos e links {richNoteCount > 0 && <span className={styles.tocCount}>{richNoteCount}</span>}
+        </button>
         <button className={styles.btn} onClick={onPreview} title="Visualizar a página (sem edição)">
           Visualizar
         </button>

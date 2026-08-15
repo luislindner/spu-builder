@@ -51,7 +51,7 @@ function preparePrintBlocks(blocks: Block[]): Block[] {
       block.props.defaultOpen = true;
     }
 
-    if (block.children?.length && (block.type === 'section' || block.type === 'collapsiblesection')) {
+    if (block.children?.length && (block.type === 'section' || block.type === 'sectionslide' || block.type === 'collapsiblesection')) {
       let current = cloneBlock(block);
       current.children = [];
 
@@ -151,7 +151,7 @@ export function PrintPreviewModal({ ns, doc, onClose }: Props) {
                     <ol>
                       {richNotes.glossary.map((note, index) => (
                         <li key={`${note.term}-${index}`}>
-                          <strong>{note.term}</strong> — {note.definition}
+                          <strong>{note.term}</strong> — <ns.RichText html={note.definition} as="div" />
                         </li>
                       ))}
                     </ol>

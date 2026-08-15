@@ -12,6 +12,7 @@ export type DocAction =
   | { type: 'ADD_CHILD'; parentId: string; block: Block }     // dentro de um container
   | { type: 'ADD_CHILD_AT'; parentId: string; block: Block; index: number }
   | { type: 'PATCH'; id: string; patch: Record<string, unknown> }
+  | { type: 'REPLACE_BLOCKS'; blocks: Block[] }
   | { type: 'REMOVE'; id: string }
   | { type: 'DUPLICATE'; id: string }
   | { type: 'MOVE'; parentId: string | null; fromIndex: number; toIndex: number }
@@ -238,6 +239,10 @@ export function docReducer(state: DocState, action: DocAction): DocState {
         if (b) Object.assign(b.props, action.patch);
         break;
       }
+
+      case 'REPLACE_BLOCKS':
+        draft.blocks = action.blocks as never;
+        break;
 
       case 'REMOVE': {
         const found = findParentArray(blocks, action.id);

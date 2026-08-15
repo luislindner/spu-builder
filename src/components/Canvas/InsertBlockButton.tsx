@@ -10,6 +10,7 @@ interface Props {
   onInsert: (type: string) => void;
   spacing?: 'default' | 'title' | 'tight';
   embedded?: boolean;
+  includeHidden?: boolean;
 }
 
 interface MenuPosition {
@@ -20,7 +21,7 @@ interface MenuPosition {
   maxHeight: number;
 }
 
-export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'default', embedded = false }: Props) {
+export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'default', embedded = false, includeHidden = false }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [position, setPosition] = useState<MenuPosition | null>(null);
@@ -30,8 +31,8 @@ export function InsertBlockButton({ ns, allowedTypes, onInsert, spacing = 'defau
   const allowed = useMemo(() => new Set(allowedTypes), [allowedTypes]);
 
   const blocks = useMemo(() => ns.BlockRegistry.blocks.filter((block) => (
-    allowed.has(block.type) && !HIDDEN_BLOCKS.has(block.type)
-  )), [allowed, ns.BlockRegistry.blocks]);
+    allowed.has(block.type) && (includeHidden || !HIDDEN_BLOCKS.has(block.type))
+  )), [allowed, includeHidden, ns.BlockRegistry.blocks]);
 
   const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
   const filtered = normalizedQuery

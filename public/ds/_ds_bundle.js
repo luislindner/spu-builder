@@ -729,6 +729,37 @@ const BLOCKS = [
     children: []
   }
 }, {
+  type: 'sectionslider',
+  component: 'SectionSlider',
+  label: 'Seção-slider',
+  icon: 'chevrons-right',
+  cat: 'Estrutura',
+  kind: 'container',
+  stack: false,
+  props: {
+    loop: true,
+    children: []
+  },
+  propFields: [{
+    key: 'loop',
+    label: 'Navegação circular',
+    type: 'bool'
+  }]
+}, {
+  type: 'sectionslide',
+  component: 'Section',
+  label: 'Slide (seção)',
+  icon: 'layout',
+  cat: 'Estrutura',
+  kind: 'container',
+  internal: true,
+  props: {
+    width: 'content',
+    surface: 'none',
+    pad: 'lg',
+    children: []
+  }
+}, {
   type: 'columns',
   component: 'Columns',
   label: 'Colunas',
@@ -1706,6 +1737,52 @@ const BLOCKS = [
     provider: 'Externo',
     url: 'https://'
   }
+}, {
+  type: 'externalembed',
+  component: 'ExternalEmbed',
+  label: 'Conteúdo externo (iframe)',
+  icon: 'code',
+  cat: 'Mídia',
+  kind: 'list',
+  propFields: [{
+    key: 'title',
+    label: 'Título acessível',
+    type: 'text'
+  }, {
+    key: 'embed',
+    label: 'URL ou código iframe',
+    type: 'text'
+  }, {
+    key: 'responsive',
+    label: 'Responsivo na largura',
+    type: 'bool'
+  }, {
+    key: 'useEmbedDimensions',
+    label: 'Herdar dimensões do iframe',
+    type: 'bool'
+  }, {
+    key: 'width',
+    label: 'Largura máxima (px)',
+    type: 'number',
+    min: 240,
+    max: 2400,
+    step: 10
+  }, {
+    key: 'height',
+    label: 'Altura (px)',
+    type: 'number',
+    min: 120,
+    max: 2400,
+    step: 10
+  }],
+  props: {
+    title: 'Conteúdo incorporado',
+    embed: '',
+    responsive: true,
+    useEmbedDimensions: true,
+    width: 960,
+    height: 540
+  }
 },
 // ── Interativos ──
 {
@@ -2009,8 +2086,10 @@ const BLOCKS = [
 const BLOCK_BY_TYPE = Object.fromEntries(BLOCKS.map(b => [b.type, b]));
 const BLOCK_CATS = ['Estrutura', 'Texto', 'Destaques', 'Mídia', 'Interativos'];
 // Tipos que NÃO podem viver dentro de uma Section (são estrutura de página).
-const STRUCTURAL_TYPES = ['masthead', 'section', 'hero', 'conclusion', 'pagefooter'];
-const CHILD_TYPES = BLOCKS.map(b => b.type).filter(t => STRUCTURAL_TYPES.indexOf(t) === -1);
+const STRUCTURAL_TYPES = ['masthead', 'section', 'sectionslider', 'hero', 'conclusion', 'pagefooter'];
+const CHILD_TYPES = BLOCKS.filter(b => !b.internal && STRUCTURAL_TYPES.indexOf(b.type) === -1).map(b => b.type);
+BLOCK_BY_TYPE.sectionslider.allowedTypes = ['sectionslide'];
+BLOCK_BY_TYPE.sectionslide.allowedTypes = CHILD_TYPES;
 function uid(p) {
   return p + Math.random().toString(36).slice(2, 9);
 }
@@ -2025,6 +2104,8 @@ function newBlock(type, child) {
     props: JSON.parse(JSON.stringify(def.props || {}))
   };
   if (type === 'section') b.props.children = [newBlock('titulo', true), newBlock('prose', true)];
+  if (type === 'sectionslide') b.props.children = [newBlock('titulo', true), newBlock('prose', true)];
+  if (type === 'sectionslider') b.props.children = [newBlock('sectionslide', true), newBlock('sectionslide', true)];
   return b;
 }
 const BlockRegistry = {
@@ -2769,8 +2850,8 @@ function applyTerm() {
     if (!def) return;
     if (active && active.isConnected) {
       active.setAttribute('data-term', word);
-      active.setAttribute('title', def);
-      active.removeAttribute('data-definition');
+      active.setAttribute('data-definition', def);
+      active.removeAttribute('title');
       active.removeAttribute('data-def');
       fireInput(host);
       return;
@@ -2780,7 +2861,7 @@ function applyTerm() {
     s.addRange(saved);
     wrapSelection('span', {
       'data-term': word,
-      title: def
+      'data-definition': def
     }, 'span[data-term]');
   });
 }
@@ -2835,7 +2916,11 @@ function Editable({
       document.execCommand('insertText', false, t);
     },
     onKeyDown: e => {
-      if (single && e.key === 'Enter') {
+      if (single && e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        document.execCommand('insertLineBreak', false, null);
+        ref.current && fireInput(ref.current);
+      } else if (single && e.key === 'Enter') {
         e.preventDefault();
         ref.current && ref.current.blur();
       } else if (!single && e.key === 'Enter' && !e.shiftKey) {
@@ -3168,6 +3253,16 @@ function resolveMedia(url) {
   };
   const u = url.trim();
   let m;
+  // O Eduplay expõe páginas públicas em /app/video/:id e /app/audio/:id,
+  // enquanto o player próprio para incorporação usa /embed/ no mesmo caminho.
+  // Guardamos sempre a URL pública no documento e derivamos o player em runtime,
+  // evitando persistir links temporários/assinados do CDN.
+  if (m = u.match(/^https?:\/\/eduplay\.rnp\.br\/app\/(video|audio)\/(?:embed\/)?([\w-]+)(?:[/?#]|$)/i)) return {
+    kind: 'iframe',
+    src: `https://eduplay.rnp.br/app/${m[1].toLowerCase()}/embed/${m[2]}`,
+    provider: 'Eduplay',
+    audio: m[1].toLowerCase() === 'audio'
+  };
   if (m = u.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/)) return {
     kind: 'iframe',
     src: `https://www.youtube.com/embed/${m[1]}`
@@ -3246,6 +3341,11 @@ function MediaEmbed({
       allow: 'autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture'
     });
   } else if (media.kind === 'iframe') {
+    if (media.audio) frameStyle = {
+      aspectRatio: 'auto',
+      height: 180,
+      minHeight: 180
+    };
     player = React.createElement('iframe', {
       src: media.src,
       title: accessibleTitle || 'mídia',
@@ -3324,6 +3424,161 @@ function MediaEmbed({
 }
 Object.assign(__ds_scope, { MediaEmbed });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/MediaEmbed.jsx", error: String((e && e.message) || e) }); }
+
+// components/content/ExternalEmbed.jsx
+try { (() => {
+__ds_scope.injectCss('spu-external-embed-css', `
+.spu-external-embed{width:100%;margin-inline:auto}
+.spu-external-embed__frame{position:relative;width:100%;overflow:hidden;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);box-shadow:var(--shadow-sm)}
+.spu-external-embed__frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.spu-external-embed__empty{display:grid;place-items:center;min-height:220px;padding:var(--space-6);color:var(--text-muted);text-align:center;background:var(--color-surface-warm)}
+.spu-external-embed__print{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);word-break:break-all}
+.spu-external-embed__print a{color:var(--color-primary-strong)}
+@media print{.spu-external-embed{break-inside:avoid}}
+`);
+function parseExternalEmbed(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return {};
+  let src = raw;
+  let width;
+  let height;
+  if (/^<iframe\b/i.test(raw) && typeof DOMParser !== 'undefined') {
+    try {
+      const doc = new DOMParser().parseFromString(raw, 'text/html');
+      const iframe = doc.querySelector('iframe');
+      if (iframe) {
+        src = iframe.getAttribute('src') || '';
+        width = Number.parseFloat(iframe.getAttribute('width') || '') || undefined;
+        height = Number.parseFloat(iframe.getAttribute('height') || '') || undefined;
+      }
+    } catch (e) {}
+  }
+  if (!/^https?:\/\//i.test(src)) return {};
+  return { src, width, height };
+}
+function externalTitleText(value) {
+  if (typeof value === 'string') return value.replace(/<[^>]*>/g, '').trim();
+  if (React.isValidElement(value) && value.props && typeof value.props.html === 'string') return value.props.html.replace(/<[^>]*>/g, '').trim();
+  return 'Conteúdo incorporado';
+}
+function ExternalEmbed({
+  embed,
+  title = 'Conteúdo incorporado',
+  responsive = true,
+  useEmbedDimensions = true,
+  width,
+  height = 600,
+  className,
+  style
+}) {
+  const parsed = parseExternalEmbed(embed);
+  const accessibleTitle = externalTitleText(title);
+  const intrinsicWidth = useEmbedDimensions && parsed.width || Number(width) || undefined;
+  const intrinsicHeight = useEmbedDimensions && parsed.height || Number(height) || 600;
+  const ratio = intrinsicWidth && intrinsicHeight ? `${intrinsicWidth} / ${intrinsicHeight}` : undefined;
+  const rootStyle = {
+    maxWidth: intrinsicWidth ? `${intrinsicWidth}px` : undefined,
+    ...style
+  };
+  if (!parsed.src) return React.createElement('div', {
+    className: __ds_scope.cx('spu-external-embed', className),
+    style: rootStyle
+  }, React.createElement('div', { className: 'spu-external-embed__empty' }, 'Cole uma URL pública ou o código de incorporação <iframe>.'));
+  if (__ds_scope.isPrint()) return React.createElement('div', {
+    className: __ds_scope.cx('spu-external-embed', className),
+    style: rootStyle
+  }, React.createElement('div', { className: 'spu-external-embed__print' }, React.createElement('strong', null, accessibleTitle), React.createElement('br'), React.createElement('a', {
+    href: parsed.src,
+    target: '_blank',
+    rel: 'noopener'
+  }, parsed.src)));
+  const frameStyle = responsive && ratio ? {
+    aspectRatio: ratio
+  } : {
+    height: `${intrinsicHeight}px`,
+    minHeight: 120
+  };
+  return React.createElement('div', {
+    className: __ds_scope.cx('spu-external-embed', className),
+    style: rootStyle
+  }, React.createElement('div', {
+    className: 'spu-external-embed__frame',
+    style: frameStyle
+  }, React.createElement('iframe', {
+    src: parsed.src,
+    title: accessibleTitle,
+    loading: 'lazy',
+    allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen',
+    allowFullScreen: true
+  })));
+}
+Object.assign(__ds_scope, { ExternalEmbed });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/content/ExternalEmbed.jsx", error: String((e && e.message) || e) }); }
+
+// components/layout/SectionSlider.jsx
+try { (() => {
+__ds_scope.injectCss('spu-section-slider-css', `
+.spu-section-slider{position:relative;overflow:hidden;background:var(--color-page)}
+.spu-section-slider__track{display:flex;width:100%;transition:transform var(--dur) var(--ease-out);will-change:transform}
+.spu-section-slider__track>*{flex:0 0 100%;min-width:0}
+.spu-section-slider__arrow{position:absolute;z-index:5;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-primary);border-radius:var(--radius-pill);background:var(--color-surface);color:var(--color-primary-strong);box-shadow:var(--shadow-md);cursor:pointer}
+.spu-section-slider__arrow:hover{background:var(--color-primary-soft)}
+.spu-section-slider__arrow--prev{left:var(--space-3)}.spu-section-slider__arrow--next{right:var(--space-3)}
+.spu-section-slider__status{position:absolute;z-index:4;right:var(--space-4);bottom:var(--space-3);padding:.35em .65em;border-radius:var(--radius-pill);background:var(--color-surface);color:var(--text-muted);box-shadow:var(--shadow-sm);font-family:var(--font-mono);font-size:var(--fs-eyebrow)}
+.spu-section-slider--editing{outline:1px dashed color-mix(in srgb,var(--color-primary) 40%,transparent);outline-offset:-1px}
+.spu-section-slider--print{overflow:visible}.spu-section-slider--print .spu-section-slider__track{display:flex;flex-direction:column;transform:none!important;gap:var(--flow-block)}.spu-section-slider--print .spu-section-slider__track>*{flex:auto;width:100%}.spu-section-slider--print .spu-section-slider__arrow,.spu-section-slider--print .spu-section-slider__status{display:none}
+@media(max-width:720px){.spu-section-slider__arrow{width:38px;height:38px}.spu-section-slider__arrow--prev{left:var(--space-2)}.spu-section-slider__arrow--next{right:var(--space-2)}}
+@media print{.spu-section-slider{overflow:visible}.spu-section-slider__track{display:flex!important;flex-direction:column!important;transform:none!important;gap:var(--flow-block)}.spu-section-slider__track>*{flex:auto!important;width:100%!important}.spu-section-slider__arrow,.spu-section-slider__status{display:none!important}}
+`);
+function SectionSlider({ children, loop = true, className, style, __builderEditing = false }) {
+  const slides = React.Children.toArray(children);
+  const [current, setCurrent] = React.useState(0);
+  const printing = __ds_scope.isPrint();
+  const count = slides.length;
+  React.useEffect(() => {
+    if (current >= count) setCurrent(Math.max(0, count - 1));
+  }, [current, count]);
+  const go = delta => {
+    if (count < 2) return;
+    setCurrent(value => loop ? (value + delta + count) % count : Math.max(0, Math.min(count - 1, value + delta)));
+  };
+  if (!count) return React.createElement('div', {
+    className: __ds_scope.cx('spu-section-slider', className),
+    style
+  });
+  return React.createElement('div', {
+    className: __ds_scope.cx('spu-section-slider', printing && 'spu-section-slider--print', __builderEditing && 'spu-section-slider--editing', className),
+    style,
+    tabIndex: printing ? undefined : 0,
+    role: 'region',
+    'aria-roledescription': 'carrossel',
+    'aria-label': 'Seções em carrossel',
+    onKeyDown: printing ? undefined : event => {
+      if (event.key === 'ArrowLeft') { event.preventDefault(); go(-1); }
+      if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
+    }
+  }, React.createElement('div', {
+    className: 'spu-section-slider__track',
+    style: { transform: printing ? undefined : `translateX(-${current * 100}%)` }
+  }, slides.map((slide, index) => React.createElement('div', {
+    key: React.isValidElement(slide) && slide.key || index,
+    className: 'spu-section-slider__slide',
+    'aria-hidden': printing ? undefined : index !== current,
+    inert: !printing && !__builderEditing && index !== current ? true : undefined
+  }, slide))), !printing && count > 1 && React.createElement(React.Fragment, null,
+    React.createElement('button', {
+      type: 'button', className: 'spu-section-slider__arrow spu-section-slider__arrow--prev',
+      onClick: () => go(-1), disabled: !loop && current === 0, 'aria-label': 'Seção anterior'
+    }, React.createElement(__ds_scope.Icon, { name: 'arrow-left', size: 20 })),
+    React.createElement('button', {
+      type: 'button', className: 'spu-section-slider__arrow spu-section-slider__arrow--next',
+      onClick: () => go(1), disabled: !loop && current === count - 1, 'aria-label': 'Próxima seção'
+    }, React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 20 })),
+    React.createElement('span', { className: 'spu-section-slider__status', 'aria-live': 'polite' }, `${current + 1} / ${count}`)
+  ));
+}
+Object.assign(__ds_scope, { SectionSlider });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/layout/SectionSlider.jsx", error: String((e && e.message) || e) }); }
 
 // components/content/PageToc.jsx
 try { (() => {
@@ -4260,6 +4515,7 @@ __ds_scope.injectCss('spu-gloss-css', `
 .spu-gloss__pop[data-placement="bottom"]::after{top:auto;bottom:100%;transform:translate(-50%,50%) rotate(225deg)}
 .spu-gloss__term{font-family:var(--font-display);font-weight:700;font-size:var(--fs-small);color:var(--text-strong);margin:0 0 .25em}
 .spu-gloss__def{font-size:var(--fs-small);font-weight:400;color:var(--text-body);line-height:1.5;margin:0}
+.spu-gloss__def p{margin:0 0 .55em}.spu-gloss__def p:last-child{margin-bottom:0}
 .spu-gloss__src{display:block;font-family:var(--font-mono);font-size:var(--fs-eyebrow);text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin-top:var(--space-2)}
 @keyframes spu-pop{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .spu-gloss__fn{font-family:var(--font-mono);font-size:.7em;font-weight:600;color:var(--color-accent-strong);vertical-align:super;line-height:0;margin-left:.1em}
@@ -4284,6 +4540,24 @@ function _registerNote(term, definition, source) {
     idx = _glossNotes.length - 1;
   }
   return idx + 1;
+}
+function _safeGlossaryDefinition(value) {
+  if (typeof document === 'undefined') return '';
+  const box = document.createElement('div');
+  box.innerHTML = String(value || '');
+  const allowed = new Set(['STRONG', 'B', 'EM', 'I', 'BR', 'P', 'SPAN']);
+  Array.from(box.querySelectorAll('*')).forEach(el => {
+    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') {
+      el.remove();
+      return;
+    }
+    if (!allowed.has(el.tagName)) {
+      el.replaceWith(...Array.from(el.childNodes));
+      return;
+    }
+    Array.from(el.attributes).forEach(attr => el.removeAttribute(attr.name));
+  });
+  return box.innerHTML;
 }
 function GlossaryTerm({
   children,
@@ -4328,9 +4602,9 @@ function GlossaryTerm({
     const popTerm = document.createElement('p');
     popTerm.className = 'spu-gloss__term';
     popTerm.textContent = term;
-    const popDef = document.createElement('p');
+    const popDef = document.createElement('div');
     popDef.className = 'spu-gloss__def';
-    popDef.textContent = definition;
+    popDef.innerHTML = _safeGlossaryDefinition(definition);
     pop.append(popTerm, popDef);
     if (source) {
       const popSource = document.createElement('span');
@@ -4388,7 +4662,10 @@ function GlossaryFootnotes({
     className: 'spu-gloss-notes__h'
   }, title), React.createElement('ol', null, _glossNotes.map((nt, i) => React.createElement('li', {
     key: i
-  }, React.createElement('strong', null, nt.term), ' — ', nt.definition, nt.source && React.createElement('em', null, nt.source)))));
+  }, React.createElement('strong', null, nt.term), ' — ', React.createElement(__ds_scope.RichText, {
+    html: nt.definition,
+    as: 'div'
+  }), nt.source && React.createElement('em', null, nt.source)))));
 }
 Object.assign(__ds_scope, { GlossaryTerm, GlossaryFootnotes });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/interactive/GlossaryTerm.jsx", error: String((e && e.message) || e) }); }
@@ -4468,17 +4745,18 @@ __ds_scope.injectCss('spu-richtext-css', `
 .spu-richtext [data-font="body"]{font-family:var(--font-body)}
 .spu-richtext [data-font="serif"]{font-family:var(--font-serif)}
 .spu-richtext [data-font="mono"]{font-family:var(--font-mono)}
-.spu-richtext [data-fs="eyebrow"]{font-size:var(--fs-eyebrow)}
+.spu-richtext [data-fs="eyebrow"]{font-family:var(--font-mono);font-size:var(--fs-eyebrow);font-weight:600;line-height:1.3;letter-spacing:var(--ls-eyebrow);text-transform:uppercase}
 .spu-richtext [data-fs="caption"]{font-size:var(--fs-caption)}
 .spu-richtext [data-fs="small"]{font-size:var(--fs-small)}
 .spu-richtext [data-fs="body"]{font-size:var(--fs-body)}
 .spu-richtext [data-fs="body-lg"]{font-size:var(--fs-body-lg)}
+.spu-richtext [data-fs="h6"],.spu-richtext [data-fs="h5"],.spu-richtext [data-fs="h4"],.spu-richtext [data-fs="h3"],.spu-richtext [data-fs="h2"],.spu-richtext [data-fs="display"]{font-family:var(--font-display);font-weight:700;line-height:var(--lh-heading);letter-spacing:var(--ls-heading);text-transform:none}
 .spu-richtext [data-fs="h6"]{font-size:var(--fs-h6)}
 .spu-richtext [data-fs="h5"]{font-size:var(--fs-h5)}
 .spu-richtext [data-fs="h4"]{font-size:var(--fs-h4)}
 .spu-richtext [data-fs="h3"]{font-size:var(--fs-h3)}
 .spu-richtext [data-fs="h2"]{font-size:var(--fs-h2)}
-.spu-richtext [data-fs="display"]{font-size:var(--fs-display);line-height:var(--lh-tight)}
+.spu-richtext [data-fs="display"]{font-size:var(--fs-display);line-height:var(--lh-tight);letter-spacing:var(--ls-display, var(--ls-heading))}
 /* Termo de glossário (marcação) */
 .spu-richtext [data-term]{text-decoration:underline dotted;text-underline-offset:.2em;text-decoration-color:var(--color-primary);cursor:help}
 /* Variante inline (campos de uma linha: legenda, título) */
@@ -4584,7 +4862,7 @@ function _convert(node, key) {
     return React.createElement(__ds_scope.GlossaryTerm, {
       key,
       term,
-      definition: node.getAttribute('title') || node.getAttribute('data-def') || '',
+      definition: node.getAttribute('data-definition') || node.getAttribute('title') || node.getAttribute('data-def') || '',
       source: node.getAttribute('data-source') || undefined
     }, kids.length ? kids : term);
   }
@@ -8815,6 +9093,16 @@ __ds_ns.MarkerList = __ds_scope.MarkerList;
 __ds_ns.Masthead = __ds_scope.Masthead;
 
 __ds_ns.MediaEmbed = __ds_scope.MediaEmbed;
+
+__ds_ns.ExternalEmbed = __ds_scope.ExternalEmbed;
+
+__ds_ns.SectionSlider = __ds_scope.SectionSlider;
+
+__ds_ns.injectCss = __ds_scope.injectCss;
+
+__ds_ns.isPrint = __ds_scope.isPrint;
+
+__ds_ns.renderRich = __ds_scope.renderRich;
 
 __ds_ns.PageFooter = __ds_scope.PageFooter;
 

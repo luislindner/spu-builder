@@ -178,6 +178,13 @@
   border-color: var(--color-primary);
 }
 
+.embedCode {
+  min-height: 108px;
+  resize: vertical;
+  line-height: 1.45;
+  font-family: var(--font-mono);
+}
+
 .iconGallery {
   max-height: 200px;
   overflow-y: auto;

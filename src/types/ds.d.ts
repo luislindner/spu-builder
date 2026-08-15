@@ -31,6 +31,9 @@ export interface BlockDef {
   itemFields?: FieldDef[];
   propFields?: FieldDef[];
   locks?: { bg?: boolean };
+  stack?: boolean;
+  internal?: boolean;
+  allowedTypes?: string[];
 }
 
 export interface Block {

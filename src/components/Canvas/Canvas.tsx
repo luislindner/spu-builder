@@ -22,6 +22,7 @@ interface NodeCallbacks {
   onMove: (id: string, dir: 'up' | 'down') => void;
   onInlineEdit: (block: Block, patch: Record<string, unknown>) => void;
   onInsert: (parentId: string | null, index: number, type: string) => void;
+  siblingTypes?: string[];
 }
 
 // Um nó da árvore: container (Section/Columns via componente real do DS) ou
@@ -32,11 +33,13 @@ function BlockNode({ block, index, count, parentId, ...cb }: NodeCallbacks & { b
   const isContainer = def?.kind === 'container';
   const isSelected = selectedId === block.id;
   const isCompactSubheading = block.type === 'titulo' && ['h3', 'h4', 'h5', 'h6'].includes(String(block.props.level || ''));
-  const insertTypes = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
+  const siblingTypes = cb.siblingTypes;
+  const insertTypes = siblingTypes || (parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes);
   const insertAfter = (
     <InsertBlockButton
       ns={ns}
       allowedTypes={insertTypes}
+      includeHidden={insertTypes.some((type) => ns.BlockRegistry.byType[type]?.internal)}
       spacing={block.type === 'kicker' ? 'tight' : block.type === 'titulo' ? 'title' : 'default'}
       onInsert={(type) => cb.onInsert(parentId, index + 1, type)}
     />
@@ -185,6 +188,7 @@ const NON_EDITABLE_TEXT_KEYS = new Set([
   'icon',
   'kickerIcon',
   'provider',
+  'embed',
   'licenseKind',
 ]);
 
@@ -626,12 +630,12 @@ function EditableFigure({ block, ...cb }: NodeCallbacks & { block: Block }) {
 function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; def: BlockDef }) {
   const { ns } = cb;
   const children: Block[] = (block.children as Block[]) || [];
-  const childTypes: string[] = ns.BlockRegistry.childTypes;
+  const childTypes: string[] = def.allowedTypes || ns.BlockRegistry.childTypes;
   const isStack = (def as { stack?: boolean }).stack !== false;
   const Comp = ns[def.component as string] as React.ComponentType<Record<string, unknown>>;
   const componentProps = editableContainerProps(block, def, cb);
   const { children: _childrenProp, ...componentPropsWithoutChildren } = componentProps;
-  if (block.type === 'collapsiblesection') {
+  if (block.type === 'collapsiblesection' || block.type === 'sectionslider') {
     componentPropsWithoutChildren.__builderEditing = true;
   }
 
@@ -639,8 +643,8 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
 
   const strategy = isStack ? verticalListSortingStrategy : rectSortingStrategy;
 
-  const nodes = children.length === 0 ? (
-    <>
+  const nodes = children.length === 0 ? [(
+    <React.Fragment key="empty">
       {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === 0 && <DropIndicator />}
       <div className={styles.emptyDrop}>
         <ns.Icon name="plus" size={16} />
@@ -649,27 +653,31 @@ function ContainerBody({ block, def, ...cb }: NodeCallbacks & { block: Block; de
         <InsertBlockButton
           ns={ns}
           allowedTypes={childTypes}
+          includeHidden={childTypes.some((type) => ns.BlockRegistry.byType[type]?.internal)}
           onInsert={(type) => cb.onInsert(block.id, 0, type)}
         />
       </div>
-    </>
-  ) : (
-    <SortableContext items={children.map(c => c.id)} strategy={strategy}>
-      {children.map((c, i) => (
-        <React.Fragment key={c.id}>
-          {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === i && <DropIndicator />}
-          <BlockNode block={c} index={i} count={children.length} parentId={block.id} {...cb} />
-        </React.Fragment>
-      ))}
-      {cb.dropTarget?.parentId === block.id && cb.dropTarget.index === children.length && <DropIndicator />}
-    </SortableContext>
-  );
+    </React.Fragment>
+  )] : children.map((c, i) => {
+    const node = <BlockNode key={c.id} {...cb} block={c} index={i} count={children.length} parentId={block.id} siblingTypes={childTypes} />;
+    if (cb.dropTarget?.parentId !== block.id || cb.dropTarget.index !== i) return node;
+    return <React.Fragment key={c.id}><DropIndicator />{node}</React.Fragment>;
+  });
+  if (children.length > 0 && cb.dropTarget?.parentId === block.id && cb.dropTarget.index === children.length) {
+    nodes.push(<DropIndicator key="drop-end" />);
+  }
 
   // Stack (Section): filhos num flex-column com gap do DS, dentro de um wrapper
   // droppable. Grid (Columns): filhos vão direto como células; droppable no wrapper.
   const inner = isStack
-    ? <div ref={dropRef} className={styles.stack + (isOver ? ` ${styles.dropOver}` : '')}>{nodes}</div>
-    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>{React.createElement(Comp, componentPropsWithoutChildren, nodes)}</div>;
+    ? <div ref={dropRef} className={styles.stack + (isOver ? ` ${styles.dropOver}` : '')}>
+        <SortableContext items={children.map(c => c.id)} strategy={strategy}>{nodes}</SortableContext>
+      </div>
+    : <div ref={dropRef} className={isOver ? styles.dropOver : undefined}>
+        <SortableContext items={children.map(c => c.id)} strategy={strategy}>
+          {React.createElement(Comp, componentPropsWithoutChildren, ...nodes)}
+        </SortableContext>
+      </div>;
 
   // Para stack, o componente (Section) envolve o stack; para grid já está montado.
   return isStack

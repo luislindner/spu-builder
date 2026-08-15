@@ -92,6 +92,39 @@ function normalizeListItems(block: JsonRecord, props: JsonRecord) {
   }
 }
 
+function compatId(prefix: string) {
+  return prefix + Math.random().toString(36).slice(2, 9);
+}
+
+function migrateCollapsibleSection(block: JsonRecord, props: JsonRecord) {
+  if (block.type !== 'collapsiblesection') return;
+  const directChildren = Array.isArray(block.children) ? block.children : [];
+  const propChildren = Array.isArray(props.children) ? props.children : [];
+  const children = directChildren.length ? directChildren : propChildren;
+  const hasMarker = children.some((child) => isRecord(child) && child.type === 'collapsebreak');
+  if (!hasMarker) {
+    const before: JsonRecord[] = [];
+    if (hasMeaningfulText(props.title)) before.push({
+      id: compatId('c'),
+      type: 'titulo',
+      props: { text: props.title, level: 'h2' },
+    });
+    if (hasMeaningfulText(props.lead)) before.push({
+      id: compatId('c'),
+      type: 'prose',
+      props: { html: props.lead },
+    });
+    block.children = [
+      ...before,
+      { id: compatId('c'), type: 'collapsebreak', props: {} },
+      ...children,
+    ];
+  }
+  props.children = [];
+  delete props.title;
+  delete props.lead;
+}
+
 /**
  * Aceita nomes de campos usados por versões antigas e por JSONs produzidos
  * fora do builder, antes de o sanitize preencher os valores-padrão do DS.
@@ -118,6 +151,8 @@ export function normalizeProjectContent(raw: unknown): unknown {
       if (['callout', 'examplecard', 'reflexao', 'pullquote'].includes(String(value.type))) {
         copyAlias(props, 'children', ['content', 'body', 'html', 'text', 'description']);
       }
+
+      migrateCollapsibleSection(value, props);
 
       normalizeListItems(value, props);
       if (Array.isArray(value.children)) walk(value.children);
