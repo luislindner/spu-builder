@@ -3551,17 +3551,23 @@ Object.assign(__ds_scope, { ExternalEmbed });
 // components/layout/SectionSlider.jsx
 try { (() => {
 __ds_scope.injectCss('spu-section-slider-css', `
-.spu-section-slider{position:relative;overflow:hidden;background:var(--color-page)}
+.spu-section-slider{position:relative;background:var(--color-page)}
+.spu-section-slider__viewport{position:relative;overflow:hidden}
 .spu-section-slider__track{display:flex;width:100%;transition:transform var(--dur) var(--ease-out);will-change:transform}
 .spu-section-slider__track>*{flex:0 0 100%;min-width:0}
 .spu-section-slider__arrow{position:absolute;z-index:5;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-primary);border-radius:var(--radius-pill);background:var(--color-surface);color:var(--color-primary-strong);box-shadow:var(--shadow-md);cursor:pointer}
 .spu-section-slider__arrow:hover{background:var(--color-primary-soft)}
 .spu-section-slider__arrow--prev{left:var(--space-32)}.spu-section-slider__arrow--next{right:var(--space-32)}
-.spu-section-slider__status{position:absolute;z-index:4;right:var(--space-4);bottom:var(--space-3);padding:.35em .65em;border-radius:var(--radius-pill);background:var(--color-surface);color:var(--text-muted);box-shadow:var(--shadow-sm);font-family:var(--font-mono);font-size:var(--fs-eyebrow)}
+.spu-section-slider__nav{display:flex;align-items:center;justify-content:center;margin-top:var(--space-4)}
+.spu-section-slider__center{display:flex;flex-direction:column;align-items:center;gap:var(--space-2)}
+.spu-section-slider__dots{display:flex;align-items:center;gap:var(--space-2)}
+.spu-section-slider__dot{width:8px;height:8px;border-radius:var(--radius-pill);background:var(--slate-300);border:0;padding:0;cursor:pointer;transition:width var(--dur) var(--ease-out),background var(--dur) var(--ease-out)}
+.spu-section-slider__dot--active{width:24px;background:var(--color-primary)}
+.spu-section-slider__count{font-family:var(--font-mono);font-size:var(--fs-caption);color:var(--text-muted);text-align:center}
 .spu-section-slider--editing{outline:1px dashed color-mix(in srgb,var(--color-primary) 40%,transparent);outline-offset:-1px}
-.spu-section-slider--print{overflow:visible}.spu-section-slider--print .spu-section-slider__track{display:flex;flex-direction:column;transform:none!important;gap:var(--flow-block)}.spu-section-slider--print .spu-section-slider__track>*{flex:auto;width:100%}.spu-section-slider--print .spu-section-slider__arrow,.spu-section-slider--print .spu-section-slider__status{display:none}
+.spu-section-slider--print .spu-section-slider__viewport{overflow:visible}.spu-section-slider--print .spu-section-slider__track{display:flex;flex-direction:column;transform:none!important;gap:var(--flow-block)}.spu-section-slider--print .spu-section-slider__track>*{flex:auto;width:100%}.spu-section-slider--print .spu-section-slider__arrow,.spu-section-slider--print .spu-section-slider__nav{display:none}
 @media(max-width:720px){.spu-section-slider__arrow{width:38px;height:38px}.spu-section-slider__arrow--prev{left:var(--space-4)}.spu-section-slider__arrow--next{right:var(--space-4)}}
-@media print{.spu-section-slider{overflow:visible}.spu-section-slider__track{display:flex!important;flex-direction:column!important;transform:none!important;gap:var(--flow-block)}.spu-section-slider__track>*{flex:auto!important;width:100%!important}.spu-section-slider__arrow,.spu-section-slider__status{display:none!important}}
+@media print{.spu-section-slider__viewport{overflow:visible!important}.spu-section-slider__track{display:flex!important;flex-direction:column!important;transform:none!important;gap:var(--flow-block)}.spu-section-slider__track>*{flex:auto!important;width:100%!important}.spu-section-slider__arrow,.spu-section-slider__nav{display:none!important}}
 `);
 function SectionSlider({ children, loop = true, className, style, __builderEditing = false }) {
   const slides = React.Children.toArray(children);
@@ -3591,14 +3597,16 @@ function SectionSlider({ children, loop = true, className, style, __builderEditi
       if (event.key === 'ArrowRight') { event.preventDefault(); go(1); }
     }
   }, React.createElement('div', {
-    className: 'spu-section-slider__track',
-    style: { transform: printing ? undefined : `translateX(-${current * 100}%)` }
-  }, slides.map((slide, index) => React.createElement('div', {
-    key: React.isValidElement(slide) && slide.key || index,
-    className: 'spu-section-slider__slide',
-    'aria-hidden': printing ? undefined : index !== current,
-    inert: !printing && !__builderEditing && index !== current ? true : undefined
-  }, slide))), !printing && count > 1 && React.createElement(React.Fragment, null,
+    className: 'spu-section-slider__viewport'
+  }, React.createElement('div', {
+      className: 'spu-section-slider__track',
+      style: { transform: printing ? undefined : `translateX(-${current * 100}%)` }
+    }, slides.map((slide, index) => React.createElement('div', {
+      key: React.isValidElement(slide) && slide.key || index,
+      className: 'spu-section-slider__slide',
+      'aria-hidden': printing ? undefined : index !== current,
+      inert: !printing && !__builderEditing && index !== current ? true : undefined
+    }, slide))), !printing && count > 1 && React.createElement(React.Fragment, null,
     React.createElement('button', {
       type: 'button', className: 'spu-section-slider__arrow spu-section-slider__arrow--prev',
       onClick: () => go(-1), disabled: !loop && current === 0, 'aria-label': 'Seção anterior'
@@ -3606,9 +3614,24 @@ function SectionSlider({ children, loop = true, className, style, __builderEditi
     React.createElement('button', {
       type: 'button', className: 'spu-section-slider__arrow spu-section-slider__arrow--next',
       onClick: () => go(1), disabled: !loop && current === count - 1, 'aria-label': 'Próxima seção'
-    }, React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 20 })),
-    React.createElement('span', { className: 'spu-section-slider__status', 'aria-live': 'polite' }, `${current + 1} / ${count}`)
-  ));
+    }, React.createElement(__ds_scope.Icon, { name: 'arrow-right', size: 20 }))
+  )), !printing && count > 1 && React.createElement('div', {
+    className: 'spu-section-slider__nav'
+  }, React.createElement('div', {
+    className: 'spu-section-slider__center'
+  }, React.createElement('div', {
+    className: 'spu-section-slider__dots'
+  }, slides.map((_, index) => React.createElement('button', {
+    key: index,
+    type: 'button',
+    className: __ds_scope.cx('spu-section-slider__dot', index === current && 'spu-section-slider__dot--active'),
+    onClick: () => setCurrent(index),
+    'aria-label': `Ir para a seção ${index + 1}`,
+    'aria-current': index === current ? 'true' : undefined
+  }))), React.createElement('div', {
+    className: 'spu-section-slider__count',
+    'aria-live': 'polite'
+  }, `${current + 1} / ${count}`))));
 }
 Object.assign(__ds_scope, { SectionSlider });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/layout/SectionSlider.jsx", error: String((e && e.message) || e) }); }
@@ -3691,6 +3714,7 @@ __ds_scope.injectCss('spu-quote-css', `
 .spu-quote__glyph{color:var(--color-accent);display:flex}
 .spu-quote--eye .spu-quote__glyph{justify-content:center;margin-bottom:var(--space-3)}
 .spu-quote__text{font-family:var(--font-serif);font-size:var(--spu-quote-font-size);font-weight:500;color:var(--text-strong);line-height:var(--spu-quote-line-height);margin:0}
+.spu-quote__text .spu-richtext{font-size:inherit;line-height:inherit}
 .spu-quote[data-font-size="small"]{--spu-quote-font-size:var(--fs-small);--spu-quote-line-height:1.55}
 .spu-quote[data-font-size="body"]{--spu-quote-font-size:var(--fs-body);--spu-quote-line-height:1.52}
 .spu-quote[data-font-size="body-lg"]{--spu-quote-font-size:var(--fs-body-lg);--spu-quote-line-height:1.46}
