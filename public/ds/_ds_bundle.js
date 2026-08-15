@@ -2847,11 +2847,18 @@ function applyEmphasis(cmd) {
   const sel = window.getSelection();
   fireInput(sel ? closestEditable(sel.anchorNode) : null);
 }
+function isExternalLink(url) {
+  return /^https?:\/\//i.test(String(url || '').trim());
+}
 function applyLink(url, asButton) {
   if (!url) return;
   const attrs = {
     href: url
   };
+  if (isExternalLink(url)) {
+    attrs.target = '_blank';
+    attrs.rel = 'noopener noreferrer';
+  }
   if (asButton) attrs['data-btn'] = asButton === true ? 'primary' : asButton; // primary|secondary|ghost
   wrapSelection('a', attrs, 'a[href]');
 }
@@ -4915,6 +4922,9 @@ function _attrs(el, key) {
   }
   return props;
 }
+function isExternalLink(url) {
+  return /^https?:\/\//i.test(String(url || '').trim());
+}
 function _convert(node, key) {
   if (node.nodeType === 3) return node.nodeValue; // texto
   if (node.nodeType !== 1) return null; // comentários etc.
@@ -4936,6 +4946,13 @@ function _convert(node, key) {
   if (tag === 'a') {
     const href = node.getAttribute('href') || '';
     const props = _attrs(node, key);
+    if (isExternalLink(href)) {
+      props.target = props.target || '_blank';
+      const rel = new Set(String(props.rel || '').split(/\s+/).filter(Boolean));
+      rel.add('noopener');
+      rel.add('noreferrer');
+      props.rel = Array.from(rel).join(' ');
+    }
     if (/^https?:/i.test(href) && __ds_scope.isPrint()) {
       const label = (node.textContent || href).trim();
       const n = _registerLink(label, href);
