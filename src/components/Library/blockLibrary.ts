@@ -1,4 +1,4 @@
-export const HIDDEN_BLOCKS = new Set(['reflexao']);
+export const HIDDEN_BLOCKS = new Set(['reflexao', 'collapsebreak', 'sectionslide']);
 
 const ICON_SET_CACHE = new WeakMap<string[], Set<string>>();
 

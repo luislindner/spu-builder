@@ -3,26 +3,23 @@ import type { BlockDef, NS } from '../types/ds';
 
 type CompatNS = NS & {
   CollapsibleSection?: React.ComponentType<Record<string, unknown>>;
+  CollapseBreak?: React.ComponentType<Record<string, unknown>>;
   injectCss?: (id: string, css: string) => void;
   isPrint?: () => boolean;
   renderRich?: (value: unknown, options?: { inline?: boolean }) => React.ReactNode;
 };
 
 const COLLAPSIBLE_SECTION_CSS = `
-.spu-csection__intro{max-width:var(--measure);margin-bottom:var(--space-5)}
-.spu-csection__title{margin:0;font-family:var(--font-display);font-size:var(--fs-h2);line-height:1.08;letter-spacing:var(--ls-heading);color:var(--text-strong)}
-.spu-csection__lead{margin-top:var(--space-3);color:var(--text-muted);font-size:var(--fs-body-lg);line-height:var(--lh-relaxed)}
-.spu-csection__lead>:last-child{margin-bottom:0}
-.spu-csection__details{border-top:1px solid var(--color-divider);padding-top:var(--space-4)}
-.spu-csection__summary{display:inline-flex;align-items:center;gap:var(--space-2);padding:.68em .95em;border:1px solid var(--color-primary);border-radius:var(--radius);color:var(--color-primary-strong);background:transparent;font-family:var(--font-display);font-weight:700;cursor:pointer;list-style:none;transition:background var(--dur-fast),color var(--dur-fast)}
-.spu-csection__summary::-webkit-details-marker{display:none}
+.spu-csection__always,.spu-csection__body{display:flex;flex-direction:column;gap:var(--flow-block)}
+.spu-csection__summary{display:inline-flex;align-items:center;gap:var(--space-2);width:max-content;margin-top:var(--flow-block);padding:.68em .95em;border:1px solid var(--color-primary);border-radius:var(--radius);color:var(--color-primary-strong);background:transparent;font-family:var(--font-display);font-weight:700;cursor:pointer;transition:background var(--dur-fast),color var(--dur-fast)}
 .spu-csection__summary:hover{background:var(--color-primary-soft)}
 .spu-csection__summary svg{transition:transform var(--dur) var(--ease-out)}
-.spu-csection__details[open]>.spu-csection__summary svg{transform:rotate(180deg)}
+.spu-csection__summary[aria-expanded="true"] svg{transform:rotate(180deg)}
 .spu-csection__body{margin-top:var(--space-6)}
+.spu-csection__marker-editor{padding:.55em .85em;border:1px dashed var(--color-primary);border-radius:var(--radius);color:var(--color-primary-strong);background:var(--color-primary-soft);font-family:var(--font-mono);font-size:var(--fs-eyebrow);letter-spacing:.04em;text-transform:uppercase}
 .spu-section--dark .spu-csection__summary{border-color:var(--text-on-dark);color:var(--text-on-dark)}
 .spu-section--dark .spu-csection__summary:hover{background:rgba(255,255,255,.1)}
-@media print{.spu-csection__details>.spu-csection__body{display:block!important}.spu-csection__summary{display:none!important}}
+@media print{.spu-csection__body{display:flex!important}.spu-csection__summary{display:none!important}}
 `;
 
 export function installCollapsibleSection(ns: NS) {
@@ -36,10 +33,16 @@ export function installCollapsibleSection(ns: NS) {
     return target.renderRich ? target.renderRich(value, { inline }) : value as React.ReactNode;
   }
 
+  function blockType(node: React.ReactNode): string | undefined {
+    if (!React.isValidElement(node)) return undefined;
+    const props = node.props as { block?: { type?: string }; children?: React.ReactNode };
+    if (props.block?.type) return props.block.type;
+    const nested = React.Children.toArray(props.children);
+    return nested.map(blockType).find(Boolean);
+  }
+
   function CollapsibleSection(props: Record<string, unknown>) {
     const {
-      title,
-      lead,
       triggerLabel = 'Clique para expandir',
       defaultOpen = false,
       width = 'content',
@@ -54,8 +57,11 @@ export function installCollapsibleSection(ns: NS) {
     const forcedOpen = printing || __builderEditing === true;
     const [open, setOpen] = React.useState(Boolean(defaultOpen));
     const Section = target.Section as React.ComponentType<Record<string, unknown>>;
-    const hasTitle = Boolean(title);
-    const hasLead = Boolean(lead);
+    const items = React.Children.toArray(children as React.ReactNode);
+    const markerIndex = items.findIndex((item) => blockType(item) === 'collapsebreak');
+    const marker = markerIndex >= 0 ? items[markerIndex] : null;
+    const alwaysVisible = markerIndex >= 0 ? items.slice(0, markerIndex) : [];
+    const collapsed = markerIndex >= 0 ? items.slice(markerIndex + 1) : items;
 
     return React.createElement(Section, {
       ...rest,
@@ -64,31 +70,41 @@ export function installCollapsibleSection(ns: NS) {
       pad,
       className: ['spu-csection', className].filter(Boolean).join(' '),
     }, React.createElement(React.Fragment, null,
-      (hasTitle || hasLead) && React.createElement('div', { className: 'spu-csection__intro' },
-        hasTitle && React.createElement('h2', { className: 'spu-csection__title' }, rich(title, true)),
-        hasLead && React.createElement('div', { className: 'spu-csection__lead' }, rich(lead)),
-      ),
-      React.createElement('details', {
-        className: 'spu-csection__details',
-        open: forcedOpen || open,
-        onToggle: (event: React.SyntheticEvent<HTMLDetailsElement>) => {
-          if (!forcedOpen) setOpen(event.currentTarget.open);
-        },
-      },
-      React.createElement('summary', {
+      alwaysVisible.length > 0 && React.createElement('div', { className: 'spu-csection__always' }, alwaysVisible),
+      __builderEditing === true && marker,
+      !printing && React.createElement('button', {
+        type: 'button',
         className: 'spu-csection__summary',
-        onClick: (event: React.MouseEvent<HTMLElement>) => {
-          if (forcedOpen) event.preventDefault();
-        },
+        'aria-expanded': forcedOpen || open,
+        onClick: () => { if (!forcedOpen) setOpen((value) => !value); },
       },
         rich(triggerLabel, true),
         React.createElement(target.Icon, { name: 'chevron-down', size: 18 }),
       ),
-      React.createElement('div', { className: 'spu-csection__body' }, children as React.ReactNode)),
-    ));
+      React.createElement('div', {
+        className: 'spu-csection__body',
+        hidden: !(forcedOpen || open),
+      }, collapsed)),
+    );
+  }
+
+  function CollapseBreak() {
+    return React.createElement('div', { className: 'spu-csection__marker-editor' }, 'Conteúdo recolhido abaixo deste ponto');
   }
 
   target.CollapsibleSection = CollapsibleSection;
+  target.CollapseBreak = CollapseBreak;
+
+  const markerDefinition: BlockDef = {
+    type: 'collapsebreak',
+    component: 'CollapseBreak',
+    label: 'Botão de recolher',
+    icon: 'chevron-down',
+    cat: 'Estrutura',
+    kind: 'marker',
+    internal: true,
+    props: {},
+  };
 
   const definition: BlockDef = {
     type: 'collapsiblesection',
@@ -97,10 +113,10 @@ export function installCollapsibleSection(ns: NS) {
     icon: 'chevron-down',
     cat: 'Estrutura',
     kind: 'container',
-    fields: ['title', 'lead', 'triggerLabel'],
+    fields: ['triggerLabel'],
+    stack: false,
+    allowedTypes: [...registry.childTypes, markerDefinition.type],
     props: {
-      title: 'Título da seção',
-      lead: '<p>Apresente brevemente o conteúdo que poderá ser expandido.</p>',
       triggerLabel: 'Clique para expandir',
       defaultOpen: false,
       width: 'content',
@@ -117,7 +133,9 @@ export function installCollapsibleSection(ns: NS) {
 
   const sectionIndex = registry.blocks.findIndex((block) => block.type === 'section');
   registry.blocks.splice(sectionIndex >= 0 ? sectionIndex + 1 : registry.blocks.length, 0, definition);
+  registry.blocks.push(markerDefinition);
   registry.byType[definition.type] = definition;
+  registry.byType[markerDefinition.type] = markerDefinition;
   if (!registry.structuralTypes.includes(definition.type)) {
     const structuralIndex = registry.structuralTypes.indexOf('section');
     registry.structuralTypes.splice(structuralIndex >= 0 ? structuralIndex + 1 : registry.structuralTypes.length, 0, definition.type);
@@ -125,11 +143,19 @@ export function installCollapsibleSection(ns: NS) {
 
   const originalNewBlock = registry.newBlock.bind(registry);
   registry.newBlock = (type, child) => {
+    if (type === markerDefinition.type) return {
+      id: (child ? 'c' : 'b') + Math.random().toString(36).slice(2, 9),
+      type: markerDefinition.type,
+      props: {},
+    };
     if (type !== definition.type) return originalNewBlock(type, child);
     return {
       id: (child ? 'c' : 'b') + Math.random().toString(36).slice(2, 9),
       type: definition.type,
-      props: JSON.parse(JSON.stringify(definition.props)),
+      props: {
+        ...JSON.parse(JSON.stringify(definition.props)),
+        children: [registry.newBlock(markerDefinition.type, true)],
+      },
     };
   };
 }

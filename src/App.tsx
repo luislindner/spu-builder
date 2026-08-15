@@ -26,9 +26,11 @@ import { Inspector } from './components/Inspector/Inspector';
 import { Toolbar } from './components/Toolbar/Toolbar';
 import { PreviewModal } from './components/Preview/PreviewModal';
 import { PrintPreviewModal } from './components/PrintPreview/PrintPreviewModal';
+import { RichNotesModal } from './components/RichNotes/RichNotesModal';
 import { normalizeProjectContent } from './utils/projectCompat';
 import { clearImageSlots } from './utils/imageSlotStore';
 import type { Block } from './types/ds';
+import { updateRichNote, type RichNoteUpdate } from './utils/richNotes';
 import styles from './App.module.css';
 
 const AUTOSAVE_KEY = 'spu_builder_doc';
@@ -70,6 +72,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [printPreviewing, setPrintPreviewing] = useState(false);
+  const [richNotesOpen, setRichNotesOpen] = useState(false);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
 
   const [state, dispatch] = useReducer(docReducer, null, (): DocState => ({
@@ -133,6 +136,14 @@ export default function App() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
+  function allowedTypesForParent(parentId: string | null): string[] {
+    if (!ns) return [];
+    if (!parentId) return ns.BlockRegistry.structuralTypes;
+    const parent = findBlock(state.doc.blocks, parentId);
+    const definition = parent ? ns.BlockRegistry.byType[parent.type] : undefined;
+    return definition?.allowedTypes || ns.BlockRegistry.childTypes;
+  }
+
   // Insere um bloco pela biblioteca, respeitando a regra: blocos de conteúdo
   // SEMPRE vivem dentro de uma Section; só os estruturais ficam no nível raiz.
   function insertBlock(type: string) {
@@ -183,10 +194,9 @@ export default function App() {
     // 1. Drag da biblioteca
     if (activeId.startsWith('lib:')) {
       const type = activeId.slice(4);
-      const childTypes: string[] = ns.BlockRegistry.childTypes;
       const structural: string[] = ns.BlockRegistry.structuralTypes;
 
-      if (target?.parentId && childTypes.includes(type)) {
+      if (target?.parentId && allowedTypesForParent(target.parentId).includes(type)) {
         dispatch({ type: 'ADD_CHILD_AT', parentId: target.parentId, index: target.index, block: ns.BlockRegistry.newBlock(type) });
         return;
       }
@@ -208,9 +218,8 @@ export default function App() {
 
       const movingDef = ns.BlockRegistry.byType[moving.type];
       const structural: string[] = ns.BlockRegistry.structuralTypes;
-      const childTypes: string[] = ns.BlockRegistry.childTypes;
       const canMoveToTop = !target.parentId && structural.includes(moving.type);
-      const canMoveToContainer = !!target.parentId && childTypes.includes(moving.type);
+      const canMoveToContainer = !!target.parentId && allowedTypesForParent(target.parentId).includes(moving.type);
       const movingContainerIntoOwnChild = target.parentId ? target.parentId === activeId || isDescendantOf(blocks, target.parentId, activeId) : false;
 
       if ((movingDef?.kind === 'container' || moving) && !movingContainerIntoOwnChild && (canMoveToTop || canMoveToContainer)) {
@@ -226,11 +235,10 @@ export default function App() {
 
     const activeId = String(event.active.id);
     const structural: string[] = ns.BlockRegistry.structuralTypes;
-    const childTypes: string[] = ns.BlockRegistry.childTypes;
 
     if (activeId.startsWith('lib:')) {
       const type = activeId.slice(4);
-      if (target.parentId && childTypes.includes(type)) return target;
+      if (target.parentId && allowedTypesForParent(target.parentId).includes(type)) return target;
       if (!target.parentId && structural.includes(type)) return target;
       return null;
     }
@@ -238,7 +246,7 @@ export default function App() {
     const moving = findBlock(state.doc.blocks, activeId);
     if (!moving) return null;
     const canMoveToTop = !target.parentId && structural.includes(moving.type);
-    const canMoveToContainer = !!target.parentId && childTypes.includes(moving.type);
+    const canMoveToContainer = !!target.parentId && allowedTypesForParent(target.parentId).includes(moving.type);
     const movingContainerIntoOwnChild = target.parentId ? target.parentId === activeId || isDescendantOf(state.doc.blocks, target.parentId, activeId) : false;
     if (movingContainerIntoOwnChild || (!canMoveToTop && !canMoveToContainer)) return null;
 
@@ -279,9 +287,10 @@ export default function App() {
 
     if (overDef?.kind === 'container') {
       const activeId = String(active.id);
-      const isLibraryContent = activeId.startsWith('lib:') && ns && ns.BlockRegistry.childTypes.includes(activeId.slice(4));
+      const allowed = overDef.allowedTypes || ns?.BlockRegistry.childTypes || [];
+      const isLibraryContent = activeId.startsWith('lib:') && allowed.includes(activeId.slice(4));
       const activeBlock = !activeId.startsWith('lib:') ? findBlock(blocks, activeId) : null;
-      const isExistingContent = activeBlock && ns && ns.BlockRegistry.childTypes.includes(activeBlock.type);
+      const isExistingContent = activeBlock && allowed.includes(activeBlock.type);
       if (isLibraryContent || isExistingContent) {
         return { parentId: overId, index: overBlock.children?.length ?? 0 };
       }
@@ -316,7 +325,7 @@ export default function App() {
   const handleInlineEdit = (edited: Block, patch: Record<string, unknown>) => dispatch({ type: 'PATCH', id: edited.id, patch });
   const handleInsertAt = (parentId: string | null, index: number, type: string) => {
     if (!ns) return;
-    const allowed = parentId ? ns.BlockRegistry.childTypes : ns.BlockRegistry.structuralTypes;
+    const allowed = allowedTypesForParent(parentId);
     if (!allowed.includes(type)) return;
     const block = ns.BlockRegistry.newBlock(type);
     if (!block) return;
@@ -330,6 +339,9 @@ export default function App() {
     void clearImageSlots();
     dispatch({ type: 'SET_DOC', doc: ns.BuilderExport.newDoc({ title: 'Rascunho' }) });
     setSelectedId(null);
+  };
+  const handleRichNoteUpdate = (update: RichNoteUpdate) => {
+    dispatch({ type: 'REPLACE_BLOCKS', blocks: updateRichNote(state.doc.blocks, update) });
   };
 
   return (
@@ -353,6 +365,7 @@ export default function App() {
           onOpenDoc={(d) => { dispatch({ type: 'SET_DOC', doc: d }); setSelectedId(null); }}
           onPreview={() => setPreviewing(true)}
           onPrintPreview={() => setPrintPreviewing(true)}
+          onRichNotes={() => setRichNotesOpen(true)}
           onMetaChange={(patch) => dispatch({ type: 'SYNC_META', patch })}
           onClearDoc={handleClearDoc}
         />
@@ -381,6 +394,7 @@ export default function App() {
       </div>
       {previewing && <PreviewModal ns={ns} doc={state.doc} onClose={() => setPreviewing(false)} />}
       {printPreviewing && <PrintPreviewModal ns={ns} doc={state.doc} onClose={() => setPrintPreviewing(false)} />}
+      {richNotesOpen && <RichNotesModal ns={ns} blocks={state.doc.blocks} onUpdate={handleRichNoteUpdate} onClose={() => setRichNotesOpen(false)} />}
       </DndContext>
     </AppErrorBoundary>
   );

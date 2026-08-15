@@ -16,7 +16,7 @@ export function enhanceGlossaryTerms(root: ParentNode = document) {
     const el = node as HTMLElement;
     if (el.dataset.spuTermReady) return;
     const term = (el.getAttribute('data-term') || el.textContent || '').trim();
-    const definition = (el.getAttribute('title') || el.getAttribute('data-definition') || '').trim();
+    const definition = (el.getAttribute('data-definition') || el.getAttribute('title') || el.getAttribute('data-def') || '').trim();
     if (!term || !definition) return;
 
     el.dataset.spuTermReady = '1';
@@ -33,7 +33,8 @@ export function enhanceGlossaryTerms(root: ParentNode = document) {
     const title = document.createElement('strong');
     title.textContent = term;
     const body = document.createElement('span');
-    body.textContent = definition;
+    body.className = 'spu-term-pop__def';
+    body.innerHTML = sanitizeDefinition(definition);
     pop.append(title, body);
     document.body.appendChild(pop);
     portalPops.push(pop);
@@ -87,4 +88,22 @@ export function enhanceGlossaryTerms(root: ParentNode = document) {
     window.removeEventListener('scroll', repositionOpen, true);
     portalPops.forEach((pop) => pop.remove());
   };
+}
+
+function sanitizeDefinition(value: string) {
+  const box = document.createElement('div');
+  box.innerHTML = value;
+  const allowed = new Set(['STRONG', 'B', 'EM', 'I', 'BR', 'P', 'SPAN']);
+  Array.from(box.querySelectorAll('*')).forEach((el) => {
+    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') {
+      el.remove();
+      return;
+    }
+    if (!allowed.has(el.tagName)) {
+      el.replaceWith(...Array.from(el.childNodes));
+      return;
+    }
+    Array.from(el.attributes).forEach((attribute) => el.removeAttribute(attribute.name));
+  });
+  return box.innerHTML;
 }

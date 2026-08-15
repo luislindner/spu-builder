@@ -179,6 +179,13 @@ export function Inspector({ ns, block, onPatch }: Props) {
         <label className={styles.label}>{f.label || labelFor(f.key)}</label>
         {['color', 'accent', 'bg', 'overlayBg'].includes(f.key) ? (
           <TokenColorControl value={(props[f.key] as string) || ''} onChange={(value) => patch({ [f.key]: value })} />
+        ) : block.type === 'externalembed' && f.key === 'embed' ? (
+          <textarea
+            className={`${styles.input} ${styles.embedCode}`}
+            value={(props[f.key] as string) || ''}
+            onInput={(event) => patch({ [f.key]: event.currentTarget.value })}
+            placeholder="Cole a URL ou o código <iframe>…"
+          />
         ) : (
           <FieldControl ns={ns} field={f} value={(props[f.key] as never) ?? null} onChange={(v) => patch({ [f.key]: v })} />
         )}

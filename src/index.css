@@ -119,6 +119,9 @@ button { font-family: inherit; }
   font-family: var(--font-display);
 }
 
+.spu-term-pop__def p { margin: 0 0 .55em; }
+.spu-term-pop__def p:last-child { margin-bottom: 0; }
+
 /* Full-bleed escuro: negrito deve manter a cor clara herdada do texto. */
 .spu-conclusion .spu-richtext :is(strong, b) {
   color: inherit;
