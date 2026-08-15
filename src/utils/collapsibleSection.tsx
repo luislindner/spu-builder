@@ -16,6 +16,7 @@ const COLLAPSIBLE_SECTION_CSS = `
 .spu-csection__summary svg{transition:transform var(--dur) var(--ease-out)}
 .spu-csection__summary[aria-expanded="true"] svg{transform:rotate(180deg)}
 .spu-csection__body{margin-top:var(--space-6)}
+.spu-csection__body[hidden]{display:none}
 .spu-csection__marker-editor{padding:.55em .85em;border:1px dashed var(--color-primary);border-radius:var(--radius);color:var(--color-primary-strong);background:var(--color-primary-soft);font-family:var(--font-mono);font-size:var(--fs-eyebrow);letter-spacing:.04em;text-transform:uppercase}
 .spu-section--dark .spu-csection__summary{border-color:var(--text-on-dark);color:var(--text-on-dark)}
 .spu-section--dark .spu-csection__summary:hover{background:rgba(255,255,255,.1)}
@@ -54,7 +55,7 @@ export function installCollapsibleSection(ns: NS) {
       ...rest
     } = props;
     const printing = target.isPrint?.() === true;
-    const forcedOpen = printing || __builderEditing === true;
+    const forcedOpen = printing;
     const [open, setOpen] = React.useState(Boolean(defaultOpen));
     const Section = target.Section as React.ComponentType<Record<string, unknown>>;
     const items = React.Children.toArray(children as React.ReactNode);

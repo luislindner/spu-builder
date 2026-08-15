@@ -271,6 +271,7 @@ const DS_COMPAT_JS = `
         '.spu-csection__summary svg{transition:transform var(--dur) var(--ease-out)}' +
         '.spu-csection__summary[aria-expanded="true"] svg{transform:rotate(180deg)}' +
         '.spu-csection__body{margin-top:var(--space-6)}' +
+        '.spu-csection__body[hidden]{display:none}' +
         '.spu-section--dark .spu-csection__summary{border-color:var(--text-on-dark);color:var(--text-on-dark)}' +
         '.spu-section--dark .spu-csection__summary:hover{background:rgba(255,255,255,.1)}' +
         '@media print{.spu-csection__body{display:flex!important}.spu-csection__summary{display:none!important}}';
@@ -288,7 +289,7 @@ const DS_COMPAT_JS = `
         var state = React.useState(!!props.defaultOpen);
         var open = state[0];
         var setOpen = state[1];
-        var forcedOpen = printing || props.__builderEditing === true;
+        var forcedOpen = printing;
         var items = React.Children.toArray(props.children);
         function blockType(node){
           if(!React.isValidElement(node)) return '';
