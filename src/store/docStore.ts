@@ -353,6 +353,10 @@ function applyBuilderDefaults(block: Block): Block {
   if (block.type === 'bleedimage' && block.props.zoom === undefined) {
     block.props.zoom = false;
   }
+  if (block.type === 'imagereveal') {
+    if (block.props.heightMode === undefined) block.props.heightMode = 'original';
+    if (block.props.caption === undefined) block.props.caption = '';
+  }
   return block;
 }
 
