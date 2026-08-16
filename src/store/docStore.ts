@@ -357,6 +357,14 @@ function applyBuilderDefaults(block: Block): Block {
     if (block.props.heightMode === undefined) block.props.heightMode = 'original';
     if (block.props.caption === undefined) block.props.caption = '';
   }
+  if (block.type === 'flashcard') {
+    if (block.props.showIcon === undefined) block.props.showIcon = true;
+    if (block.props.useCoverImage === undefined) block.props.useCoverImage = false;
+    if (block.props.coverSlot === undefined) block.props.coverSlot = '';
+    if (block.props.coverAlt === undefined) block.props.coverAlt = '';
+    if (block.props.frontCue === undefined) block.props.frontCue = 'Clique para virar';
+    if (block.props.backCue === undefined) block.props.backCue = 'Clique para voltar';
+  }
   return block;
 }
 

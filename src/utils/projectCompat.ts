@@ -148,7 +148,11 @@ export function normalizeProjectContent(raw: unknown): unknown {
         copyAlias(props, 'body', ['children', 'content', 'html', 'text', 'description']);
       }
 
-      if (['callout', 'examplecard', 'reflexao', 'pullquote'].includes(String(value.type))) {
+      if (value.type === 'examplecard') {
+        copyAlias(props, 'body', ['children', 'content', 'html', 'text', 'description']);
+      }
+
+      if (['callout', 'reflexao', 'pullquote'].includes(String(value.type))) {
         copyAlias(props, 'children', ['content', 'body', 'html', 'text', 'description']);
       }
 

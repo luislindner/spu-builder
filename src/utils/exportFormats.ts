@@ -308,7 +308,7 @@ const DS_COMPAT_JS = `
         ['title','lead','triggerLabel','defaultOpen','__builderEditing','children'].forEach(function(key){ delete sectionProps[key]; });
         return React.createElement(NS.Section, sectionProps,
           React.createElement(React.Fragment, null,
-            alwaysVisible.length && React.createElement('div', { className:'spu-csection__always' }, alwaysVisible),
+            alwaysVisible.length && React.createElement('div', { className:'spu-csection__always spu-blockstack' }, alwaysVisible),
             !printing && React.createElement('button', {
                 type:'button',
                 className:'spu-csection__summary',
@@ -318,7 +318,7 @@ const DS_COMPAT_JS = `
                 NS.renderRich ? NS.renderRich(triggerLabel, { inline:true }) : triggerLabel,
                 React.createElement(NS.Icon, { name:'chevron-down', size:18 })
               ),
-              React.createElement('div', { className:'spu-csection__body', hidden:!(forcedOpen || open) }, collapsed)
+              React.createElement('div', { className:'spu-csection__body spu-blockstack', hidden:!(forcedOpen || open) }, collapsed)
           )
         );
       };
