@@ -38,11 +38,27 @@
 
 /* H3–H6 da pilha principal pertencem ao conteúdo seguinte. O seletor direto
    impede que o ajuste alcance títulos internos de painéis, colunas e recursos. */
-.containerWrap[data-block-type='section']
+.containerWrap:is([data-block-type='section'], [data-block-type='sectionslide'])
   > :global(.spu-section)
   > :global(.spu-section__inner)
   > .stack
   > .leafSubheadingAfter:not(:last-child) {
+  margin-bottom: calc(-1 * var(--flow-block) + var(--space-3));
+}
+
+/* A seção expansível distribui os filhos em duas pilhas próprias. Replica
+   nelas a aproximação de eyebrow e subtítulos usada pela seção comum. */
+.containerWrap[data-block-type='collapsiblesection']
+  :global(.spu-csection__always) > .leafCompactAfter:not(:last-child),
+.containerWrap[data-block-type='collapsiblesection']
+  :global(.spu-csection__body) > .leafCompactAfter:not(:last-child) {
+  margin-bottom: calc(-1 * var(--flow-block) + var(--space-2));
+}
+
+.containerWrap[data-block-type='collapsiblesection']
+  :global(.spu-csection__always) > .leafSubheadingAfter:not(:last-child),
+.containerWrap[data-block-type='collapsiblesection']
+  :global(.spu-csection__body) > .leafSubheadingAfter:not(:last-child) {
   margin-bottom: calc(-1 * var(--flow-block) + var(--space-3));
 }
 
@@ -71,6 +87,13 @@
    mantêm suas regras compactas próprias. */
 .stack > .leafWrap > div > :not(:global(.spu-block-title), :global(.spu-kicker)) {
   margin-block: 0;
+}
+
+/* No canvas o wrapper da pilha é local; conserva o mesmo respiro que a
+   `.spu-blockstack` recebe no preview dentro do Card de exemplo. */
+.containerWrap[data-block-type='examplecard']
+  :global(.spu-examplecard__text) + .stack {
+  margin-top: var(--space-5);
 }
 
 .dropOver {

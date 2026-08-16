@@ -71,7 +71,7 @@ export function installCollapsibleSection(ns: NS) {
       pad,
       className: ['spu-csection', className].filter(Boolean).join(' '),
     }, React.createElement(React.Fragment, null,
-      alwaysVisible.length > 0 && React.createElement('div', { className: 'spu-csection__always' }, alwaysVisible),
+      alwaysVisible.length > 0 && React.createElement('div', { className: 'spu-csection__always spu-blockstack' }, alwaysVisible),
       __builderEditing === true && marker,
       !printing && React.createElement('button', {
         type: 'button',
@@ -83,7 +83,7 @@ export function installCollapsibleSection(ns: NS) {
         React.createElement(target.Icon, { name: 'chevron-down', size: 18 }),
       ),
       React.createElement('div', {
-        className: 'spu-csection__body',
+        className: 'spu-csection__body spu-blockstack',
         hidden: !(forcedOpen || open),
       }, collapsed)),
     );
