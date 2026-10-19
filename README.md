@@ -59,9 +59,13 @@ Projetos podem ser reabertos por `.spu.json` ou por HTML exportado que contenha 
 
 Ao salvar um projeto, o `.spu.json` inclui as imagens utilizadas no documento
 em `imageSlots` (data URLs), com seus ajustes de enquadramento. O mesmo vale para
-`projeto.spu.json` incluído nos pacotes HTML e SCORM: extraia esse arquivo do ZIP
+`projetom121.spu.json` (para o material M121) incluído nos pacotes HTML e SCORM: extraia esse arquivo do ZIP
 e use **Abrir** para retomar a edição com as imagens, sem precisar da pasta assets.
 O JSON preserva as imagens originais mesmo quando a publicação usa qualidade compacta.
 Projetos antigos sem `imageSlots` continuam compatíveis; imagens ausentes nesses
 arquivos precisam ser recuperadas da publicação original. O HTML autocontido
 continua podendo ser reaberto diretamente.
+
+O nome do JSON usa o código encontrado no título do documento: `M121 - Bens imóveis públicos`
+gera `projetom121.spu.json`, tanto no botão **Salvar** quanto nos pacotes HTML e SCORM.
+Códigos com sufixo, como M134a, também são aceitos. Sem código no título, o nome é `projeto.spu.json`.

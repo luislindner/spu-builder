@@ -520,8 +520,14 @@ export async function serializeProject(doc: Doc): Promise<string> {
   return JSON.stringify({ ...doc, imageSlots: await getSidecar(doc) }, null, 2);
 }
 
+// O código é informado no título do documento (ex.: M121 - Bens imóveis públicos).
+export function projectFileName(doc: Doc): string {
+  const code = doc.meta.title?.match(/\b(m\d+[a-z]?)\b/i)?.[1].toLowerCase() || '';
+  return `projeto${code}.spu.json`;
+}
+
 export async function saveProject(doc: Doc): Promise<void> {
-  download((doc.meta.title || 'projeto') + '.spu.json', await serializeProject(doc), 'application/json');
+  download(projectFileName(doc), await serializeProject(doc), 'application/json');
 }
 
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | null {
@@ -897,7 +903,7 @@ export async function exportAssetsZip(doc: Doc, quality: ImageQuality = 'high') 
 
   const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   files['index.html'] = strToU8(html);
-  files['projeto.spu.json'] = strToU8(await serializeProject(doc));
+  files[projectFileName(doc)] = strToU8(await serializeProject(doc));
   files['assets/ds-bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
   files['assets/react.js'] = strToU8(react.react);
@@ -961,7 +967,7 @@ export async function exportScormZip(doc: Doc, quality: ImageQuality = 'high') {
 
   const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license, scorm: true });
   files['index.html'] = strToU8(html);
-  files['projeto.spu.json'] = strToU8(await serializeProject(doc));
+  files[projectFileName(doc)] = strToU8(await serializeProject(doc));
   files['imsmanifest.xml'] = strToU8(imsmanifest(doc));
   files['scorm-api.js'] = strToU8(SCORM_API_JS);
   files['assets/ds-bundle.js'] = strToU8(bundleJs);
