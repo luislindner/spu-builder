@@ -514,6 +514,16 @@ async function getSidecar(doc: Doc): Promise<Sidecar> {
   }
 }
 
+// O projeto editável preserva os originais, independentemente da qualidade
+// escolhida para as imagens da publicação HTML/SCORM.
+export async function serializeProject(doc: Doc): Promise<string> {
+  return JSON.stringify({ ...doc, imageSlots: await getSidecar(doc) }, null, 2);
+}
+
+export async function saveProject(doc: Doc): Promise<void> {
+  download((doc.meta.title || 'projeto') + '.spu.json', await serializeProject(doc), 'application/json');
+}
+
 function dataUrlToBytes(dataUrl: string): { bytes: Uint8Array; ext: string } | null {
   const m = dataUrl.match(/^data:image\/([a-z0-9.+-]+);base64,(.*)$/i);
   if (!m) return null;
@@ -887,7 +897,7 @@ export async function exportAssetsZip(doc: Doc, quality: ImageQuality = 'high') 
 
   const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license });
   files['index.html'] = strToU8(html);
-  files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
+  files['projeto.spu.json'] = strToU8(await serializeProject(doc));
   files['assets/ds-bundle.js'] = strToU8(bundleJs);
   files['assets/styles.css'] = strToU8(stylesCss);
   files['assets/react.js'] = strToU8(react.react);
@@ -951,7 +961,7 @@ export async function exportScormZip(doc: Doc, quality: ImageQuality = 'high') {
 
   const html = buildPageHtml({ doc, inline: false, bundleJs, stylesCss, sidecar, react, lucideIcons: lucide.icons, lucideLicense: lucide.license, scorm: true });
   files['index.html'] = strToU8(html);
-  files['projeto.spu.json'] = strToU8(JSON.stringify(doc, null, 2));
+  files['projeto.spu.json'] = strToU8(await serializeProject(doc));
   files['imsmanifest.xml'] = strToU8(imsmanifest(doc));
   files['scorm-api.js'] = strToU8(SCORM_API_JS);
   files['assets/ds-bundle.js'] = strToU8(bundleJs);
