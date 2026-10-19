@@ -14,6 +14,7 @@ let slots = {
   hidden: { u: image },
 };
 let downloaded;
+let downloadName;
 const runtime = {
   snapshot: () => JSON.stringify(slots),
   replace: content => { slots = JSON.parse(content); },
@@ -23,7 +24,7 @@ const context = vm.createContext({
   window: { __SPU_IMAGE_SLOT_RUNTIME: runtime },
   localStorage: { setItem() {}, removeItem() {} },
   URL: { createObjectURL(blob) { downloaded = blob; return 'blob:test'; }, revokeObjectURL() {} },
-  document: { createElement: () => ({ click() {}, remove() {} }), body: { appendChild() {} } },
+  document: { createElement: () => ({ click() { downloadName = this.download; }, remove() {} }), body: { appendChild() {} } },
   setTimeout: fn => fn(),
   fetch: async () => ({ ok: true, text: async () => '' }),
 });
@@ -41,16 +42,25 @@ function load(name) {
   vm.runInContext(`(function(require,module,exports){${code}\n})`, context)(localRequire, module, module.exports);
   return module.exports;
 }
-const { serializeProject, saveProject, exportAssetsZip, exportScormZip, exportSelfContained } = load('exportFormats');
+const { projectFileName, serializeProject, saveProject, exportAssetsZip, exportScormZip, exportSelfContained } = load('exportFormats');
 const { parseProjectFile } = load('projectFile');
 const { replaceImageSlots } = load('imageSlotStore');
-const doc = { schemaVersion: 1, meta: { title: 'Teste' }, blocks: [
+const doc = { schemaVersion: 1, meta: { title: 'M121 - Teste' }, blocks: [
   { id: 'a', type: 'Figure', props: { slot: 'figure' } },
   { id: 'b', type: 'Columns', props: {}, children: [
     { id: 'c', type: 'Hero', props: { heroSlot: 'nested' } },
   ] },
   { id: 'd', type: 'Figure', props: { slot: 'hidden', showImage: false } },
 ] };
+for (const [title, expected] of [
+  ['M121 - Bens imóveis públicos', 'projetom121.spu.json'],
+  ['m134a · Complemento', 'projetom134a.spu.json'],
+  ['Teste', 'projeto.spu.json'],
+  ['', 'projeto.spu.json'],
+  ['AM1210XYZ', 'projeto.spu.json'],
+]) {
+  assert.equal(projectFileName({ ...doc, meta: { title } }), expected);
+}
 const originalDoc = JSON.stringify(doc);
 const expectedSlots = { figure: slots.figure, nested: slots.nested };
 const json = await serializeProject(doc);
@@ -65,12 +75,14 @@ assert.equal(parseProjectFile(originalDoc, 'antigo.json').imageSlots, undefined)
 assert.equal(parseProjectFile(JSON.stringify({ ...doc, imageSlots: {} }), 'vazio.json').imageSlots, '{}');
 assert.throws(() => parseProjectFile(JSON.stringify({ ...doc, imageSlots: [] }), 'invalido.json'));
 await saveProject(doc);
+assert.equal(downloadName, 'projetom121.spu.json');
 assert.deepEqual(JSON.parse(await downloaded.text()).imageSlots, expectedSlots);
 for (const exportZip of [exportAssetsZip, exportScormZip]) {
   for (const quality of ['high', 'compact']) {
     await exportZip(doc, quality);
     const files = unzipSync(new Uint8Array(await downloaded.arrayBuffer()));
-    const project = parseProjectFile(strFromU8(files['projeto.spu.json']), 'projeto.spu.json');
+    assert.equal(files['projeto.spu.json'], undefined);
+    const project = parseProjectFile(strFromU8(files['projetom121.spu.json']), 'projetom121.spu.json');
     assert.deepEqual(JSON.parse(project.imageSlots), expectedSlots);
     const html = strFromU8(files['index.html']);
     assert.match(html, /assets\/images\//);
