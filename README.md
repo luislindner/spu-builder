@@ -55,13 +55,3 @@ O builder exporta:
 - prévia PDF/A4 para impressão
 
 Projetos podem ser reabertos por `.spu.json` ou por HTML exportado que contenha os dados do builder.
-
-
-Ao salvar um projeto, o `.spu.json` inclui as imagens utilizadas no documento
-em `imageSlots` (data URLs), com seus ajustes de enquadramento. O mesmo vale para
-`projeto.spu.json` incluído nos pacotes HTML e SCORM: extraia esse arquivo do ZIP
-e use **Abrir** para retomar a edição com as imagens, sem precisar da pasta assets.
-O JSON preserva as imagens originais mesmo quando a publicação usa qualidade compacta.
-Projetos antigos sem `imageSlots` continuam compatíveis; imagens ausentes nesses
-arquivos precisam ser recuperadas da publicação original. O HTML autocontido
-continua podendo ser reaberto diretamente.

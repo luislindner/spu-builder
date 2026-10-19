@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import type { NS, Doc } from '../../types/ds';
-import { exportAssetsZip, exportScormZip, exportSelfContained, saveProject, type ImageQuality } from '../../utils/exportFormats';
-import { parseProjectFile } from '../../utils/projectFile';
+import { exportAssetsZip, exportScormZip, exportSelfContained, type ImageQuality } from '../../utils/exportFormats';
 import { normalizeProjectContent } from '../../utils/projectCompat';
 import { replaceImageSlots } from '../../utils/imageSlotStore';
 import { collectRichNotes } from '../../utils/richNotes';
@@ -55,6 +54,20 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
     }
   };
 
+  const parseProjectFile = (text: string, fileName: string): { raw: unknown; imageSlots?: string } => {
+    const looksLikeHtml = /\.html?$/i.test(fileName) || /^\s*</.test(text);
+    if (!looksLikeHtml) return { raw: JSON.parse(text) };
+
+    const html = new DOMParser().parseFromString(text, 'text/html');
+    const embedded = html.getElementById('spu-doc')?.textContent;
+    if (!embedded) {
+      throw new Error('HTML sem dados editáveis do SPU Builder.');
+    }
+    return {
+      raw: JSON.parse(embedded),
+      imageSlots: html.getElementById('spu-image-slots')?.textContent || undefined,
+    };
+  };
 
   const handleOpen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,7 +90,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
   };
 
   const handleDownloadBeforeClear = () => {
-    void runExport('JSON', saveProject);
+    BuilderExport.saveProject(doc, doc.meta.title);
   };
 
   const handleConfirmClear = () => {
@@ -140,7 +153,7 @@ export function Toolbar({ ns, doc, canUndo, canRedo, onUndo, onRedo, onTitleChan
         <button className={styles.btn} onClick={() => fileInput.current?.click()} title="Abrir projeto (.spu.json)">
           Abrir
         </button>
-        <button className={styles.btn} onClick={() => void runExport('JSON', saveProject)} disabled={exporting} title="Salvar projeto (.spu.json)">
+        <button className={styles.btn} onClick={() => BuilderExport.saveProject(doc, doc.meta.title)} title="Salvar projeto (.spu.json)">
           Salvar
         </button>
         <button className={styles.btnDanger} onClick={() => setClearOpen(true)} title="Limpar página">
